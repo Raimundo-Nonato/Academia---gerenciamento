@@ -190,7 +190,7 @@
       oklch(0.45 0.17 264 / 0.05),
       transparent 60%
     );
-    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
 
   .dark body {

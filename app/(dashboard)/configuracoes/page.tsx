@@ -19,19 +19,19 @@
  * TODO: Adicionar logs de auditoria
  */
 
-import { 
-  Settings, 
-  Building2, 
-  CreditCard, 
-  Mail, 
-  Shield, 
+import { useState } from "react";
+import {
+  Settings,
+  Building2,
+  CreditCard,
+  Shield,
   Database,
   Bell,
   Palette,
 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -75,7 +75,53 @@ const CONFIG_SECTIONS = [
   },
 ];
 
+/** Configurações rápidas disponíveis (chave, label e descrição). */
+const QUICK_SETTINGS = [
+  {
+    key: "emailNotif",
+    label: "Notificações por Email",
+    descricao: "Receber alertas de inadimplência por email",
+    padrao: true,
+  },
+  {
+    key: "renovacaoAuto",
+    label: "Renovação Automática",
+    descricao: "Gerar cobranças automaticamente no vencimento",
+    padrao: true,
+  },
+  {
+    key: "backupDiario",
+    label: "Backup Diário",
+    descricao: "Backup automático às 3:00 da manhã",
+    padrao: true,
+  },
+  {
+    key: "modoManutencao",
+    label: "Modo Manutenção",
+    descricao: "Bloquear acesso de usuários não-admin",
+    padrao: false,
+  },
+] as const;
+
 export default function ConfiguracoesPage() {
+  // Estado das configurações rápidas
+  // TODO: Persistir via API
+  const [settings, setSettings] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(QUICK_SETTINGS.map((s) => [s.key, s.padrao]))
+  );
+
+  const handleToggle = (key: string, label: string, checked: boolean) => {
+    setSettings((prev) => ({ ...prev, [key]: checked }));
+    toast.success(`${label} ${checked ? "ativado" : "desativado"}`);
+  };
+
+  const handleAbrirSecao = (titulo: string) => {
+    // TODO: Implementar telas de configuração de cada seção
+    toast.info(`Seção "${titulo}" disponível em breve`, {
+      description: "Funcionalidade aguardando integração com o backend.",
+    });
+  };
+
   return (
     <>
       <PageHeader
@@ -104,9 +150,18 @@ export default function ConfiguracoesPage() {
           const Icon = section.icon;
           
           return (
-            <Card 
+            <Card
               key={section.id}
-              className="hover:border-primary/50 transition-colors cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onClick={() => handleAbrirSecao(section.titulo)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleAbrirSecao(section.titulo);
+                }
+              }}
+              className="cursor-pointer transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring"
             >
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -138,45 +193,21 @@ export default function ConfiguracoesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Notificações por Email</Label>
-              <p className="text-xs text-muted-foreground">
-                Receber alertas de inadimplência por email
-              </p>
+          {QUICK_SETTINGS.map((setting) => (
+            <div key={setting.key} className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label htmlFor={`switch-${setting.key}`}>{setting.label}</Label>
+                <p className="text-xs text-muted-foreground">{setting.descricao}</p>
+              </div>
+              <Switch
+                id={`switch-${setting.key}`}
+                checked={settings[setting.key]}
+                onCheckedChange={(checked) =>
+                  handleToggle(setting.key, setting.label, checked)
+                }
+              />
             </div>
-            <Switch defaultChecked />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Renovação Automática</Label>
-              <p className="text-xs text-muted-foreground">
-                Gerar cobranças automaticamente no vencimento
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Backup Diário</Label>
-              <p className="text-xs text-muted-foreground">
-                Backup automático às 3:00 da manhã
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Modo Manutenção</Label>
-              <p className="text-xs text-muted-foreground">
-                Bloquear acesso de usuários não-admin
-              </p>
-            </div>
-            <Switch />
-          </div>
+          ))}
         </CardContent>
       </Card>
 

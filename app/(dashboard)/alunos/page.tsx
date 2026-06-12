@@ -2,32 +2,31 @@
  * ============================================================================
  * PÁGINA DE ALUNOS - LISTAGEM PRINCIPAL
  * ============================================================================
- * 
+ *
  * Página principal do módulo de gestão de alunos.
- * 
+ *
  * FUNCIONALIDADES:
  * - Listagem com busca e filtros (debounce 300ms)
  * - Paginação (25 itens por página)
- * - Seleção múltipla para ações em lote
+ * - Seleção múltipla com ações em lote (suspender, exportar CSV)
  * - Ficha do aluno em sheet lateral
- * - Cadastro via modal wizard (3 passos)
+ * - Cadastro via modal wizard (3 passos) — novo aluno entra na lista
+ * - Suspensão com confirmação — atualiza o status de verdade
  * - Estados: loading, vazio, erro
- * 
+ *
  * PRÓXIMOS PASSOS (TODO):
- * - Integrar com API real (substituir MOCK_DATA)
- * - Implementar ações em lote
- * - Adicionar exportação para Excel/CSV
+ * - Integrar com API real (substituir estado local por fetch)
  * - Implementar busca server-side para melhor performance
- * 
- * TIP: Em produção, mova a lógica de estado para um hook customizado
- * (ex: useAlunos) para separar concerns e facilitar testes.
  */
 
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { addDays, addMonths, format, subDays } from "date-fns";
+import { Plus, Download, UserX, X } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   AlunosFiltros,
@@ -36,10 +35,19 @@ import {
   AlunoFicha,
   NovoAlunoModal,
 } from "@/components/alunos";
-import { Aluno, FiltrosAluno, NovoAlunoData } from "@/types/aluno";
+import {
+  Aluno,
+  FiltrosAluno,
+  NovoAlunoData,
+  PLANOS_CONFIG,
+} from "@/types/aluno";
 
 // ============ DADOS MOCK ============
 // TODO: Substituir por chamadas à API
+
+/** Data ISO relativa a hoje — mantém o mock realista em qualquer época. */
+const diasAFrente = (dias: number) => format(addDays(new Date(), dias), "yyyy-MM-dd");
+const diasAtras = (dias: number) => format(subDays(new Date(), dias), "yyyy-MM-dd");
 
 /**
  * Dados mock de alunos para desenvolvimento.
@@ -51,10 +59,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "João Silva",
     email: "joao.silva@email.com",
     telefone: "(11) 99999-1111",
-    dataMatricula: "2023-06-15",
+    dataMatricula: diasAtras(240),
     plano: "Mensal",
     status: "ativo",
-    proximoVencimento: "2024-02-15",
+    proximoVencimento: diasAFrente(3),
     personalId: "p1",
     personalNome: "Carlos Trainer",
   },
@@ -63,10 +71,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Maria Santos",
     email: "maria.santos@email.com",
     telefone: "(11) 99999-2222",
-    dataMatricula: "2023-08-20",
+    dataMatricula: diasAtras(170),
     plano: "Trimestral",
     status: "ativo",
-    proximoVencimento: "2024-03-20",
+    proximoVencimento: diasAFrente(37),
     personalId: null,
     personalNome: null,
   },
@@ -75,10 +83,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Pedro Oliveira",
     email: "pedro.oliveira@email.com",
     telefone: "(11) 99999-3333",
-    dataMatricula: "2023-01-10",
+    dataMatricula: diasAtras(400),
     plano: "Anual",
     status: "ativo",
-    proximoVencimento: "2024-12-10",
+    proximoVencimento: diasAFrente(180),
     personalId: "p2",
     personalNome: "Ana Personal",
   },
@@ -87,10 +95,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Ana Costa",
     email: "ana.costa@email.com",
     telefone: "(11) 99999-4444",
-    dataMatricula: "2023-05-05",
+    dataMatricula: diasAtras(300),
     plano: "Mensal",
     status: "inadimplente",
-    proximoVencimento: "2024-01-05",
+    proximoVencimento: diasAtras(38),
     personalId: null,
     personalNome: null,
   },
@@ -99,10 +107,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Carlos Ferreira",
     email: "carlos.ferreira@email.com",
     telefone: "(11) 99999-5555",
-    dataMatricula: "2023-07-30",
+    dataMatricula: diasAtras(150),
     plano: "Semestral",
     status: "ativo",
-    proximoVencimento: "2024-06-30",
+    proximoVencimento: diasAFrente(140),
     personalId: "p1",
     personalNome: "Carlos Trainer",
   },
@@ -111,10 +119,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Juliana Lima",
     email: "juliana.lima@email.com",
     telefone: "(11) 99999-6666",
-    dataMatricula: "2022-11-15",
+    dataMatricula: diasAtras(500),
     plano: "Anual",
     status: "suspenso",
-    proximoVencimento: "2024-11-15",
+    proximoVencimento: diasAFrente(90),
     personalId: "p2",
     personalNome: "Ana Personal",
   },
@@ -123,10 +131,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Roberto Almeida",
     email: "roberto.almeida@email.com",
     telefone: "(11) 99999-7777",
-    dataMatricula: "2023-09-01",
+    dataMatricula: diasAtras(120),
     plano: "Mensal",
     status: "ativo",
-    proximoVencimento: "2024-02-01",
+    proximoVencimento: diasAFrente(2),
     personalId: null,
     personalNome: null,
   },
@@ -135,10 +143,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Fernanda Souza",
     email: "fernanda.souza@email.com",
     telefone: "(11) 99999-8888",
-    dataMatricula: "2023-03-10",
+    dataMatricula: diasAtras(280),
     plano: "Trimestral",
     status: "ativo",
-    proximoVencimento: "2024-03-10",
+    proximoVencimento: diasAFrente(26),
     personalId: "p1",
     personalNome: "Carlos Trainer",
   },
@@ -147,10 +155,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Lucas Martins",
     email: "lucas.martins@email.com",
     telefone: "(11) 99999-9999",
-    dataMatricula: "2023-04-22",
+    dataMatricula: diasAtras(420),
     plano: "Mensal",
     status: "cancelado",
-    proximoVencimento: "2023-12-22",
+    proximoVencimento: diasAtras(52),
     personalId: null,
     personalNome: null,
   },
@@ -159,10 +167,10 @@ const MOCK_ALUNOS: Aluno[] = [
     nome: "Beatriz Rocha",
     email: "beatriz.rocha@email.com",
     telefone: "(11) 98888-0000",
-    dataMatricula: "2023-10-05",
+    dataMatricula: diasAtras(60),
     plano: "Semestral",
     status: "ativo",
-    proximoVencimento: "2024-04-05",
+    proximoVencimento: diasAFrente(120),
     personalId: "p2",
     personalNome: "Ana Personal",
   },
@@ -183,8 +191,53 @@ const MOCK_PERSONAIS = [
  */
 const ITENS_POR_PAGINA = 25;
 
+/**
+ * Gera e baixa um CSV dos alunos informados.
+ * Usa ; como separador e BOM UTF-8 para abrir corretamente no Excel pt-BR.
+ */
+function exportarCSV(alunos: Aluno[]) {
+  const cabecalho = [
+    "Nome",
+    "Email",
+    "Telefone",
+    "Plano",
+    "Status",
+    "Matricula",
+    "Proximo Vencimento",
+    "Personal",
+  ];
+
+  const linhas = alunos.map((a) =>
+    [
+      a.nome,
+      a.email,
+      a.telefone,
+      a.plano,
+      a.status,
+      a.dataMatricula,
+      a.proximoVencimento,
+      a.personalNome ?? "",
+    ]
+      .map((campo) => `"${String(campo).replaceAll('"', '""')}"`)
+      .join(";")
+  );
+
+  const csv = "﻿" + [cabecalho.join(";"), ...linhas].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `alunos-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AlunosPage() {
   // ============ ESTADOS ============
+
+  // Lista de alunos (estado local enquanto não há API)
+  const [alunos, setAlunos] = useState<Aluno[]>(MOCK_ALUNOS);
 
   // Estado de loading/erro (simula chamada à API)
   const [isLoading, setIsLoading] = useState(false);
@@ -209,13 +262,13 @@ export default function AlunosPage() {
   // ============ FILTRAGEM (client-side para demo) ============
 
   /**
-   * Aplica filtros nos dados mock.
-   * 
+   * Aplica filtros nos dados.
+   *
    * IMPORTANTE: Em produção, fazer filtragem no backend
    * para melhor performance com grandes volumes de dados.
    */
   const alunosFiltrados = useMemo(() => {
-    return MOCK_ALUNOS.filter((aluno) => {
+    return alunos.filter((aluno) => {
       // Filtro de busca (nome ou email)
       if (filtros.busca) {
         const termo = filtros.busca.toLowerCase();
@@ -245,7 +298,7 @@ export default function AlunosPage() {
 
       return true;
     });
-  }, [filtros]);
+  }, [alunos, filtros]);
 
   // ============ PAGINAÇÃO ============
 
@@ -284,22 +337,49 @@ export default function AlunosPage() {
    * TODO: Implementar modo de edição na ficha.
    */
   const handleEdit = useCallback((aluno: Aluno) => {
-    // Por enquanto, apenas abre a ficha
     setAlunoSelecionado(aluno);
     setFichaAberta(true);
-    // TODO: Passar prop de modo edição para AlunoFicha
   }, []);
 
   /**
-   * Suspende aluno.
+   * Suspende um aluno — atualiza o status na lista.
    * TODO: Chamar API para persistir mudança.
    */
   const handleSuspender = useCallback((aluno: Aluno) => {
-    // TODO: Chamar API
-    console.log("Suspender aluno:", aluno.id);
-    // Simulação de feedback
-    alert(`Aluno ${aluno.nome} suspenso com sucesso!`);
+    setAlunos((prev) =>
+      prev.map((a) => (a.id === aluno.id ? { ...a, status: "suspenso" } : a))
+    );
+    toast.success(`${aluno.nome} foi suspenso(a)`, {
+      description: "O acesso à academia ficará bloqueado até a reativação.",
+    });
   }, []);
+
+  /**
+   * Suspende todos os alunos selecionados (ação em lote).
+   * TODO: Chamar API em lote.
+   */
+  const handleSuspenderSelecionados = useCallback(() => {
+    setAlunos((prev) =>
+      prev.map((a) =>
+        selectedIds.includes(a.id) ? { ...a, status: "suspenso" } : a
+      )
+    );
+    toast.success(`${selectedIds.length} aluno(s) suspenso(s)`);
+    setSelectedIds([]);
+  }, [selectedIds]);
+
+  /**
+   * Exporta os alunos selecionados (ou todos os filtrados) para CSV.
+   */
+  const handleExportarCSV = useCallback(() => {
+    const paraExportar =
+      selectedIds.length > 0
+        ? alunosFiltrados.filter((a) => selectedIds.includes(a.id))
+        : alunosFiltrados;
+
+    exportarCSV(paraExportar);
+    toast.success(`CSV exportado com ${paraExportar.length} aluno(s)`);
+  }, [alunosFiltrados, selectedIds]);
 
   /**
    * Tenta recarregar dados após erro.
@@ -314,17 +394,40 @@ export default function AlunosPage() {
   }, []);
 
   /**
-   * Salva novo aluno.
-   * TODO: Chamar API para persistir.
+   * Salva novo aluno — entra no topo da lista.
+   * TODO: Chamar API POST /alunos.
    */
   const handleSaveNovoAluno = useCallback(async (data: NovoAlunoData) => {
     // Simula delay de API
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    // TODO: Chamar API POST /alunos
-    console.log("Novo aluno:", data);
-    
-    // Em produção, recarregar lista após sucesso
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const personal = MOCK_PERSONAIS.find((p) => p.id === data.personalId);
+    const vencimento = addMonths(
+      new Date(`${data.dataInicio}T12:00:00`),
+      PLANOS_CONFIG[data.plano].meses
+    );
+
+    const novoAluno: Aluno = {
+      id: crypto.randomUUID(),
+      nome: data.nome,
+      email: data.email,
+      telefone: data.telefone,
+      dataMatricula: data.dataInicio,
+      plano: data.plano,
+      status: "ativo",
+      proximoVencimento: format(vencimento, "yyyy-MM-dd"),
+      personalId: data.personalId ?? null,
+      personalNome: personal?.nome ?? null,
+    };
+
+    setAlunos((prev) => [novoAluno, ...prev]);
+    setPaginaAtual(1);
+    toast.success(`${data.nome} matriculado(a) com sucesso!`, {
+      description: `Plano ${data.plano} — primeiro vencimento em ${format(
+        vencimento,
+        "dd/MM/yyyy"
+      )}.`,
+    });
   }, []);
 
   // ============ RENDER ============
@@ -348,7 +451,7 @@ export default function AlunosPage() {
           <AlunosFiltros
             filtros={filtros}
             onFiltrosChange={handleFiltrosChange}
-            totalAlunos={MOCK_ALUNOS.length}
+            totalAlunos={alunos.length}
             alunosExibidos={alunosFiltrados.length}
             personais={MOCK_PERSONAIS}
             isLoading={isLoading}
@@ -358,7 +461,7 @@ export default function AlunosPage() {
 
       {/* ============ TABELA DE ALUNOS ============ */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="overflow-x-auto p-0">
           <AlunosTabela
             alunos={alunosPaginados}
             isLoading={isLoading}
@@ -387,17 +490,33 @@ export default function AlunosPage() {
 
       {/* ============ BARRA DE AÇÕES EM LOTE ============ */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-4 flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
-            {selectedIds.length} aluno(s) selecionado(s)
+        <div className="rise fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border bg-card py-2 pl-4 pr-2 shadow-lg">
+          <span className="whitespace-nowrap text-sm font-medium tabular-nums">
+            {selectedIds.length} selecionado(s)
           </span>
-          {/* TODO: Implementar ações em lote */}
-          <button
-            onClick={() => setSelectedIds([])}
-            className="text-sm text-primary hover:underline"
+          <span className="h-5 w-px bg-border" aria-hidden />
+          <Button variant="ghost" size="sm" onClick={handleExportarCSV}>
+            <Download className="mr-1.5 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSuspenderSelecionados}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
-            Limpar seleção
-          </button>
+            <UserX className="mr-1.5 h-4 w-4" />
+            Suspender
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSelectedIds([])}
+            className="h-8 w-8 rounded-full"
+            aria-label="Limpar seleção"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       )}
 

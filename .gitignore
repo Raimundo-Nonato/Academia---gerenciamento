@@ -13,6 +13,10 @@ __v0_jsx-dev-runtime.ts
 node_modules
 .next/
 .DS_Store
+tsconfig.tsbuildinfo
 
 # RTK (Rust Token Killer) local state
 .rtk/
+
+# Claude Code - configurações locais (launch.json é versionado)
+.claude/settings.local.json

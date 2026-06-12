@@ -146,9 +146,9 @@ export function AlunosFiltros({
   return (
     <div className="space-y-4">
       {/* ============ LINHA PRINCIPAL DE FILTROS ============ */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
         {/* Campo de busca com ícone */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative w-full md:max-w-md md:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome ou email..."
@@ -172,7 +172,10 @@ export function AlunosFiltros({
         {/* Filtro de Status (Multi-select via Popover) */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="justify-between min-w-[140px]">
+            <Button
+              variant="outline"
+              className="w-full justify-between md:w-auto md:min-w-[140px]"
+            >
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
                 <span>Status</span>
@@ -221,7 +224,7 @@ export function AlunosFiltros({
             })
           }
         >
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full md:w-[160px]">
             <SelectValue placeholder="Plano" />
           </SelectTrigger>
           <SelectContent>
@@ -244,7 +247,7 @@ export function AlunosFiltros({
             })
           }
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Personal" />
           </SelectTrigger>
           <SelectContent>

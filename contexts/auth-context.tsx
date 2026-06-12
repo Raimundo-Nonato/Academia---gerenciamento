@@ -66,8 +66,16 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
     // TODO: Redirecionar para página de login
   }, []);
 
+  /**
+   * Troca o role do usuário logado (apenas demonstração).
+   * Permite testar RoleGate/permissões sem backend.
+   */
+  const switchRole = useCallback((role: UserRole) => {
+    setUser((prev) => (prev ? { ...prev, role } : prev));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, logout, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,12 +4,11 @@
  * ============================================================================
  * PÁGINA DO DASHBOARD
  * ============================================================================
- * 
+ *
  * Página inicial do sistema após login.
- * Exibe métricas principais e resumo de atividades.
- * 
+ * Exibe métricas principais, movimentação da semana e resumo de atividades.
+ *
  * TODO: Integrar com API real para dados dinâmicos
- * TODO: Adicionar gráficos de evolução
  * TODO: Implementar filtros por período
  */
 
@@ -18,14 +17,30 @@ import {
   UserPlus,
   DollarSign,
   TrendingUp,
+  TrendingDown,
   Calendar,
   Clock,
   AlertCircle,
+  Activity,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout";
 import { RoleGate } from "@/components/auth/role-gate";
+import { cn, formatCurrency } from "@/lib/utils";
 
 /**
  * Interface para cards de métricas.
@@ -39,33 +54,119 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
+  /** Atraso da animação de entrada (ms) para efeito escalonado */
+  delay?: number;
 }
 
 /**
  * Card de métrica individual.
  */
-function MetricCard({ title, value, description, icon: Icon, trend }: MetricCardProps) {
+function MetricCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  trend,
+  delay = 0,
+}: MetricCardProps) {
   return (
-    <Card>
+    <Card className="rise" style={{ animationDelay: `${delay}ms` }}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <span className="rounded-md bg-primary/10 p-2 text-primary">
+          <Icon className="h-4 w-4" />
+        </span>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="font-display text-3xl font-bold tracking-tight tabular-nums">
+          {value}
+        </div>
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
         )}
         {trend && (
-          <div className={`flex items-center gap-1 mt-2 text-xs ${
-            trend.isPositive ? "text-emerald-600" : "text-destructive"
-          }`}>
-            <TrendingUp className={`h-3 w-3 ${!trend.isPositive && "rotate-180"}`} />
-            <span>{trend.isPositive ? "+" : ""}{trend.value}% vs mês anterior</span>
+          <div className="mt-2">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                trend.isPositive
+                  ? "bg-success/10 text-success"
+                  : "bg-destructive/10 text-destructive"
+              )}
+            >
+              {trend.isPositive ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : (
+                <TrendingDown className="h-3 w-3" />
+              )}
+              {trend.isPositive ? "+" : ""}
+              {trend.value}% vs mês anterior
+            </span>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// TODO: Substituir por dados da API
+const MOVIMENTACAO_SEMANA = [
+  { dia: "Seg", checkins: 182 },
+  { dia: "Ter", checkins: 168 },
+  { dia: "Qua", checkins: 195 },
+  { dia: "Qui", checkins: 161 },
+  { dia: "Sex", checkins: 173 },
+  { dia: "Sáb", checkins: 98 },
+  { dia: "Dom", checkins: 42 },
+];
+
+const chartConfig = {
+  checkins: {
+    label: "Check-ins",
+    color: "var(--chart-1)",
+  },
+} satisfies ChartConfig;
+
+/**
+ * Gráfico de check-ins por dia da semana.
+ * O dia atual é destacado com o acento volt.
+ */
+function MovimentacaoChart() {
+  // getDay(): 0=Dom, 1=Seg... mapeia para o índice do array (Seg=0)
+  const hojeIndex = (new Date().getDay() + 6) % 7;
+
+  return (
+    <Card className="rise lg:col-span-2" style={{ animationDelay: "240ms" }}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="h-5 w-5 text-primary" />
+          Movimentação da Semana
+        </CardTitle>
+        <CardDescription>
+          Check-ins por dia — hoje em destaque
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig} className="h-56 w-full">
+          <BarChart data={MOVIMENTACAO_SEMANA} margin={{ left: -20 }}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis dataKey="dia" tickLine={false} axisLine={false} />
+            <YAxis tickLine={false} axisLine={false} width={48} />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+            <Bar dataKey="checkins" radius={[6, 6, 0, 0]}>
+              {MOVIMENTACAO_SEMANA.map((entry, index) => (
+                <Cell
+                  key={entry.dia}
+                  fill={
+                    index === hojeIndex ? "var(--chart-2)" : "var(--chart-1)"
+                  }
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
@@ -83,38 +184,54 @@ function UpcomingActivities() {
     { time: "16:00", title: "Manutenção Equipamentos", type: "manutencao" },
   ];
 
-  const typeColors: Record<string, string> = {
-    avaliacao: "bg-blue-500/10 text-blue-600",
-    reuniao: "bg-purple-500/10 text-purple-600",
-    treino: "bg-emerald-500/10 text-emerald-600",
-    manutencao: "bg-amber-500/10 text-amber-600",
+  const typeConfig: Record<string, { label: string; className: string; dot: string }> = {
+    avaliacao: { label: "Avaliação", className: "bg-primary/10 text-primary", dot: "bg-primary" },
+    reuniao: { label: "Reunião", className: "bg-chart-4/10 text-chart-4", dot: "bg-chart-4" },
+    treino: { label: "Treino", className: "bg-success/10 text-success", dot: "bg-success" },
+    manutencao: { label: "Manutenção", className: "bg-warning/10 text-warning", dot: "bg-warning" },
   };
 
   return (
-    <Card>
+    <Card className="rise" style={{ animationDelay: "360ms" }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
+          <Calendar className="h-5 w-5 text-primary" />
           Agenda de Hoje
         </CardTitle>
         <CardDescription>Próximas atividades programadas</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {activities.map((activity, index) => (
-            <div key={index} className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-[60px]">
-                <Clock className="h-3 w-3" />
-                {activity.time}
+        <div className="space-y-1">
+          {activities.map((activity, index) => {
+            const config = typeConfig[activity.type];
+            const isLast = index === activities.length - 1;
+
+            return (
+              <div key={index} className="flex gap-3">
+                {/* Trilho da timeline */}
+                <div className="flex flex-col items-center">
+                  <span
+                    className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", config.dot)}
+                    aria-hidden
+                  />
+                  {!isLast && <span className="w-px flex-1 bg-border" aria-hidden />}
+                </div>
+
+                <div className="flex flex-1 items-center justify-between gap-2 pb-5">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                      <Clock className="h-3 w-3" />
+                      {activity.time}
+                    </p>
+                    <p className="mt-0.5 text-sm font-medium">{activity.title}</p>
+                  </div>
+                  <Badge variant="secondary" className={config.className}>
+                    {config.label}
+                  </Badge>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{activity.title}</p>
-              </div>
-              <Badge variant="secondary" className={typeColors[activity.type]}>
-                {activity.type}
-              </Badge>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -133,16 +250,16 @@ function AlertsList() {
   ];
 
   const priorityColors: Record<string, string> = {
-    high: "border-l-destructive",
-    medium: "border-l-amber-500",
-    low: "border-l-blue-500",
+    high: "border-l-destructive bg-destructive/5",
+    medium: "border-l-warning bg-warning/5",
+    low: "border-l-primary bg-primary/5",
   };
 
   return (
-    <Card>
+    <Card className="rise" style={{ animationDelay: "300ms" }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
+          <AlertCircle className="h-5 w-5 text-primary" />
           Alertas
         </CardTitle>
         <CardDescription>Itens que requerem atenção</CardDescription>
@@ -152,7 +269,10 @@ function AlertsList() {
           {alerts.map((alert, index) => (
             <div
               key={index}
-              className={`border-l-4 pl-3 py-2 text-sm ${priorityColors[alert.priority]}`}
+              className={cn(
+                "rounded-r-md border-l-4 py-2.5 pl-3 pr-2 text-sm",
+                priorityColors[alert.priority]
+              )}
             >
               {alert.message}
             </div>
@@ -166,19 +286,17 @@ function AlertsList() {
 export default function DashboardPage() {
   return (
     <>
-      <PageHeader
-        title="Dashboard"
-        description="Visão geral do sistema"
-      />
+      <PageHeader title="Dashboard" description="Visão geral do sistema" />
 
       {/* ============ MÉTRICAS PRINCIPAIS ============ */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total de Alunos"
           value={247}
           description="Alunos ativos"
           icon={Users}
           trend={{ value: 12, isPositive: true }}
+          delay={0}
         />
         <MetricCard
           title="Novos este Mês"
@@ -186,16 +304,18 @@ export default function DashboardPage() {
           description="Matrículas realizadas"
           icon={UserPlus}
           trend={{ value: 8, isPositive: true }}
+          delay={60}
         />
-        
+
         {/* Métricas financeiras - apenas gerente+ */}
         <RoleGate minLevel={60}>
           <MetricCard
             title="Receita Mensal"
-            value="R$ 45.230"
+            value={formatCurrency(45230)}
             description="Faturamento atual"
             icon={DollarSign}
             trend={{ value: 5, isPositive: true }}
+            delay={120}
           />
           <MetricCard
             title="Taxa de Retenção"
@@ -203,47 +323,53 @@ export default function DashboardPage() {
             description="Renovações/Total"
             icon={TrendingUp}
             trend={{ value: 2, isPositive: true }}
+            delay={180}
           />
         </RoleGate>
       </div>
 
-      {/* ============ GRID DE CONTEÚDO ============ */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <UpcomingActivities />
-        
-        {/* Alertas - todos podem ver */}
+      {/* ============ MOVIMENTAÇÃO + ALERTAS ============ */}
+      <div className="mb-6 grid gap-6 lg:grid-cols-3">
+        <MovimentacaoChart />
         <AlertsList />
       </div>
 
-      {/* ============ SEÇÃO FINANCEIRA - APENAS GERENTE+ ============ */}
-      <RoleGate minLevel={60}>
-        <div className="mt-8">
-          <Card>
+      {/* ============ AGENDA + RESUMO FINANCEIRO ============ */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <UpcomingActivities />
+
+        {/* Resumo financeiro - apenas gerente+ */}
+        <RoleGate minLevel={60}>
+          <Card className="rise" style={{ animationDelay: "420ms" }}>
             <CardHeader>
               <CardTitle>Resumo Financeiro</CardTitle>
-              <CardDescription>
-                Visão consolidada do mês atual
-              </CardDescription>
+              <CardDescription>Visão consolidada do mês atual</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="p-4 rounded-lg bg-emerald-500/10">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-lg bg-success/10 p-4">
                   <p className="text-sm text-muted-foreground">Recebido</p>
-                  <p className="text-xl font-bold text-emerald-600">R$ 38.450</p>
+                  <p className="font-display text-xl font-bold tabular-nums text-success">
+                    {formatCurrency(38450)}
+                  </p>
                 </div>
-                <div className="p-4 rounded-lg bg-amber-500/10">
+                <div className="rounded-lg bg-warning/10 p-4">
                   <p className="text-sm text-muted-foreground">A Receber</p>
-                  <p className="text-xl font-bold text-amber-600">R$ 6.780</p>
+                  <p className="font-display text-xl font-bold tabular-nums text-warning">
+                    {formatCurrency(6780)}
+                  </p>
                 </div>
-                <div className="p-4 rounded-lg bg-destructive/10">
+                <div className="rounded-lg bg-destructive/10 p-4">
                   <p className="text-sm text-muted-foreground">Em Atraso</p>
-                  <p className="text-xl font-bold text-destructive">R$ 2.340</p>
+                  <p className="font-display text-xl font-bold tabular-nums text-destructive">
+                    {formatCurrency(2340)}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
-      </RoleGate>
+        </RoleGate>
+      </div>
     </>
   );
 }

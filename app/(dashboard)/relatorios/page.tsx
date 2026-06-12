@@ -17,15 +17,16 @@
  * TODO: Adicionar filtros de período
  */
 
-import { 
-  FileText, 
-  Download, 
-  TrendingUp, 
-  Users, 
-  DollarSign, 
+import {
+  FileText,
+  Download,
+  TrendingUp,
+  Users,
+  DollarSign,
   Calendar,
   BarChart3,
 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,9 +78,26 @@ const RELATORIOS = [
 ];
 
 export default function RelatoriosPage() {
-  const handleGerarRelatorio = (relatorioId: string) => {
-    // TODO: Implementar geração de relatório
-    console.log(`Gerando relatório: ${relatorioId}`);
+  /**
+   * Gera um relatório (simulado).
+   * TODO: Implementar geração real no backend (PDF/Excel)
+   */
+  const handleGerarRelatorio = (titulo: string) => {
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 1500)), {
+      loading: `Gerando relatório "${titulo}"...`,
+      success: `Relatório "${titulo}" gerado com sucesso!`,
+      error: "Falha ao gerar o relatório.",
+    });
+  };
+
+  /**
+   * Baixa um relatório (simulado).
+   * TODO: Servir arquivo real do backend
+   */
+  const handleDownload = (nome: string) => {
+    toast.info(`Download de "${nome}" disponível em breve`, {
+      description: "Funcionalidade aguardando integração com o backend.",
+    });
   };
 
   return (
@@ -108,15 +126,20 @@ export default function RelatoriosPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="flex-1"
-                    onClick={() => handleGerarRelatorio(relatorio.id)}
+                    onClick={() => handleGerarRelatorio(relatorio.titulo)}
                   >
                     <FileText className="mr-2 h-4 w-4" />
                     Visualizar
                   </Button>
-                  <Button variant="outline" size="icon">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleDownload(relatorio.titulo)}
+                    aria-label={`Baixar relatório ${relatorio.titulo}`}
+                  >
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
@@ -152,7 +175,12 @@ export default function RelatoriosPage() {
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDownload(relatorio.nome)}
+                  aria-label={`Baixar ${relatorio.nome}`}
+                >
                   <Download className="h-4 w-4" />
                 </Button>
               </div>
