@@ -60,7 +60,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RoleGate } from "@/components/auth/role-gate";
+import { RoleGate, useHasPermission } from "@/components/auth/role-gate";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/types/auth";
 import {
@@ -198,6 +198,7 @@ function getMetodoPagamentoLabel(metodo: Pagamento["metodoPagamento"]): string {
 export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
   const { user } = useAuth();
   const [showCPF, setShowCPF] = useState(false);
+  const canAccessFinance = useHasPermission(60);
 
   // Usa dados mock enquanto API não está implementada
   // TODO: Buscar detalhes completos via API quando aluno mudar
@@ -240,7 +241,7 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
 
         {/* ============ ABAS ============ */}
         <Tabs defaultValue="dados" className="mt-4">
-          <TabsList className="w-full grid grid-cols-3">
+          <TabsList className={`w-full grid ${canAccessFinance ? "grid-cols-3" : "grid-cols-2"}`}>
             <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
             {/* Aba Financeiro só aparece para gerente+ */}
             <RoleGate minLevel={60} fallback={null}>
