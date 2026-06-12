@@ -2,16 +2,19 @@
  * ============================================================================
  * ESTILOS GLOBAIS - SISTEMA DE GESTÃO ACADEMIA
  * ============================================================================
- * 
- * DESIGN SYSTEM:
- * - Sidebar: cinza escuro (#18181b / zinc-900)
- * - Conteúdo: branco/cinza muito claro
- * - Accent: azul escuro (#1e40af / blue-800)
- * - Sem Google Fonts - usando system fonts
- * 
+ *
+ * DESIGN SYSTEM "ATHLETIC PROFESSIONAL":
+ * - Tipografia: Archivo (títulos, peso forte) + Figtree (texto corrido)
+ * - Base: azul-índigo profundo profissional
+ * - Acento: "volt" (verde-limão atlético) usado com parcimônia —
+ *   indicador ativo da sidebar, destaques de gráficos e seleção de texto
+ * - Sidebar: azul-grafite escuro com indicador volt
+ * - Dark mode completo via classe .dark (next-themes)
+ *
  * TOKENS DE COR:
  * - background/foreground: cores principais de fundo e texto
- * - primary: cor de ação principal (azul escuro)
+ * - primary: cor de ação principal (azul-índigo)
+ * - volt: acento atlético (use --color-volt / classe text-volt etc.)
  * - sidebar-*: cores específicas da sidebar escura
  * - muted/accent: cores secundárias
  */
@@ -23,107 +26,112 @@
 
 :root {
   /* ============ CORES PRINCIPAIS ============ */
-  /* Fundo claro para área de conteúdo */
-  --background: oklch(0.985 0 0); /* #fafafa - quase branco */
-  --foreground: oklch(0.145 0 0); /* #1a1a1a - texto escuro */
+  /* Fundo claro com leve temperatura fria */
+  --background: oklch(0.98 0.003 250);
+  --foreground: oklch(0.17 0.015 260);
 
   /* ============ CARDS E POPOVERS ============ */
-  --card: oklch(1 0 0); /* branco puro */
-  --card-foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.015 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.17 0.015 260);
 
-  /* ============ COR PRIMÁRIA - AZUL ESCURO ============ */
-  /* #1e40af - azul escuro profissional */
-  --primary: oklch(0.389 0.156 262.75);
+  /* ============ COR PRIMÁRIA - AZUL-ÍNDIGO ============ */
+  --primary: oklch(0.45 0.17 264);
   --primary-foreground: oklch(0.985 0 0);
+
+  /* ============ ACENTO ATLÉTICO - VOLT ============ */
+  /* Verde-limão de alta energia. Usar pontualmente. */
+  --volt: oklch(0.88 0.2 125);
+  --volt-foreground: oklch(0.25 0.06 130);
 
   /* ============ CORES SECUNDÁRIAS ============ */
-  --secondary: oklch(0.96 0 0); /* cinza muito claro */
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.94 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.94 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.955 0.005 250);
+  --secondary-foreground: oklch(0.25 0.02 260);
+  --muted: oklch(0.945 0.005 250);
+  --muted-foreground: oklch(0.46 0.015 260);
+  --accent: oklch(0.94 0.01 255);
+  --accent-foreground: oklch(0.25 0.02 260);
 
   /* ============ FEEDBACK ============ */
-  --destructive: oklch(0.577 0.245 27.325); /* vermelho */
+  --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.6 0.13 160);
+  --warning: oklch(0.7 0.15 75);
 
   /* ============ BORDAS E INPUTS ============ */
-  --border: oklch(0.88 0 0);
-  --input: oklch(0.88 0 0);
-  --ring: oklch(0.389 0.156 262.75); /* mesmo que primary */
+  --border: oklch(0.9 0.006 255);
+  --input: oklch(0.89 0.006 255);
+  --ring: oklch(0.45 0.17 264);
 
   /* ============ GRÁFICOS ============ */
-  --chart-1: oklch(0.389 0.156 262.75); /* azul primário */
-  --chart-2: oklch(0.6 0.118 184.704); /* teal */
-  --chart-3: oklch(0.5 0.15 260); /* azul médio */
-  --chart-4: oklch(0.55 0.1 200); /* azul-verde */
-  --chart-5: oklch(0.45 0.12 250); /* azul escuro */
+  --chart-1: oklch(0.45 0.17 264); /* azul primário */
+  --chart-2: oklch(0.72 0.17 128); /* volt escurecido p/ fundo claro */
+  --chart-3: oklch(0.6 0.12 200); /* azul-petróleo */
+  --chart-4: oklch(0.55 0.16 290); /* violeta */
+  --chart-5: oklch(0.7 0.15 75); /* âmbar */
 
   /* ============ RADIUS ============ */
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  /* ============ SIDEBAR - TEMA ESCURO ============ */
-  /* #18181b - zinc-900 */
-  --sidebar: oklch(0.141 0.005 285.82);
-  --sidebar-foreground: oklch(0.95 0 0);
-  /* Primary na sidebar usa o azul */
-  --sidebar-primary: oklch(0.389 0.156 262.75);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  /* Accent na sidebar - cinza escuro mais claro */
-  --sidebar-accent: oklch(0.22 0.005 285.82);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.25 0.005 285.82);
-  --sidebar-ring: oklch(0.389 0.156 262.75);
+  /* ============ SIDEBAR - AZUL-GRAFITE ESCURO ============ */
+  --sidebar: oklch(0.17 0.018 270);
+  --sidebar-foreground: oklch(0.94 0.005 250);
+  /* Primary na sidebar = volt (indicador ativo) */
+  --sidebar-primary: oklch(0.88 0.2 125);
+  --sidebar-primary-foreground: oklch(0.2 0.05 130);
+  --sidebar-accent: oklch(0.23 0.02 268);
+  --sidebar-accent-foreground: oklch(0.96 0.005 250);
+  --sidebar-border: oklch(0.27 0.02 268);
+  --sidebar-ring: oklch(0.88 0.2 125);
 }
 
-/* 
- * TIP: Tema dark não é necessário neste sistema
- * mas está aqui caso queira adicionar no futuro
- */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.55 0.2 262.75);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.22 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.22 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.5 0.2 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.25 0 0);
-  --input: oklch(0.25 0 0);
-  --ring: oklch(0.55 0.2 262.75);
-  --chart-1: oklch(0.55 0.2 262.75);
-  --chart-2: oklch(0.65 0.15 184.704);
-  --chart-3: oklch(0.6 0.18 260);
-  --chart-4: oklch(0.6 0.12 200);
-  --chart-5: oklch(0.55 0.15 250);
-  --sidebar: oklch(0.12 0 0);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.55 0.2 262.75);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.18 0 0);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.2 0 0);
-  --sidebar-ring: oklch(0.55 0.2 262.75);
+  --background: oklch(0.145 0.012 268);
+  --foreground: oklch(0.95 0.005 250);
+  --card: oklch(0.185 0.015 268);
+  --card-foreground: oklch(0.95 0.005 250);
+  --popover: oklch(0.2 0.015 268);
+  --popover-foreground: oklch(0.95 0.005 250);
+  --primary: oklch(0.62 0.16 262);
+  --primary-foreground: oklch(0.13 0.02 268);
+  --volt: oklch(0.88 0.2 125);
+  --volt-foreground: oklch(0.22 0.05 130);
+  --secondary: oklch(0.24 0.015 268);
+  --secondary-foreground: oklch(0.95 0.005 250);
+  --muted: oklch(0.23 0.015 268);
+  --muted-foreground: oklch(0.68 0.012 260);
+  --accent: oklch(0.26 0.018 268);
+  --accent-foreground: oklch(0.95 0.005 250);
+  --destructive: oklch(0.62 0.21 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --success: oklch(0.7 0.14 160);
+  --warning: oklch(0.78 0.14 80);
+  --border: oklch(0.28 0.018 268);
+  --input: oklch(0.3 0.018 268);
+  --ring: oklch(0.62 0.16 262);
+  --chart-1: oklch(0.62 0.16 262);
+  --chart-2: oklch(0.85 0.19 128);
+  --chart-3: oklch(0.7 0.12 200);
+  --chart-4: oklch(0.65 0.16 290);
+  --chart-5: oklch(0.78 0.14 80);
+  --sidebar: oklch(0.125 0.012 268);
+  --sidebar-foreground: oklch(0.94 0.005 250);
+  --sidebar-primary: oklch(0.88 0.2 125);
+  --sidebar-primary-foreground: oklch(0.2 0.05 130);
+  --sidebar-accent: oklch(0.2 0.015 268);
+  --sidebar-accent-foreground: oklch(0.96 0.005 250);
+  --sidebar-border: oklch(0.24 0.015 268);
+  --sidebar-ring: oklch(0.88 0.2 125);
 }
 
 @theme inline {
-  /* ============ FONTES DO SISTEMA ============ */
-  /* TIP: Usando system fonts para melhor performance */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 
+  /* ============ FONTES ============ */
+  /* Variáveis injetadas pelo next/font em app/layout.tsx */
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, 
+  --font-display: var(--font-archivo), var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo,
     Consolas, "Liberation Mono", monospace;
 
   /* ============ MAPEAMENTO DE CORES ============ */
@@ -135,6 +143,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-volt: var(--volt);
+  --color-volt-foreground: var(--volt-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -143,6 +153,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -169,13 +181,71 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    /* Atmosfera sutil: halo do azul primário no topo da área de conteúdo */
+    background-image: radial-gradient(
+      1100px 500px at 75% -5%,
+      oklch(0.45 0.17 264 / 0.05),
+      transparent 60%
+    );
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-image: radial-gradient(
+      1100px 500px at 75% -5%,
+      oklch(0.62 0.16 262 / 0.09),
+      transparent 60%
+    );
+  }
+
+  /* Títulos usam a display font com tracking apertado */
+  h1, h2, h3 {
+    @apply font-display;
+  }
+
+  /* Seleção de texto com o acento volt */
+  ::selection {
+    background: var(--volt);
+    color: var(--volt-foreground);
+  }
+
+  /* Números tabulares em métricas e tabelas */
+  [data-slot="table"],
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* ============ ANIMAÇÃO DE ENTRADA ============ */
+  /* Entrada suave para conteúdo de página. Aplique .rise e, se quiser
+     escalonar, defina style={{ animationDelay: "80ms" }} no elemento. */
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .rise {
+    animation: rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise {
+      animation: none;
+    }
   }
 }
 
 /* ============ SCROLLBAR CUSTOMIZADA ============ */
-/* TIP: Scrollbar sutil para não distrair */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -186,10 +256,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.7 0 0);
+  background: oklch(0.7 0.01 260 / 0.55);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.6 0 0);
+  background: oklch(0.6 0.01 260 / 0.7);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(0.4 0.015 265 / 0.6);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.015 265 / 0.7);
 }
