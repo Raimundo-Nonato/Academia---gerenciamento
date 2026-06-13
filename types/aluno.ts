@@ -21,9 +21,14 @@ export type StatusAluno = "ativo" | "inadimplente" | "suspenso" | "cancelado";
 
 /**
  * Tipos de plano disponíveis.
- * TIP: Para adicionar novos planos, adicione aqui e em PLANOS_CONFIG.
+ * @deprecated Sistema migrado para mensalidade única. Mantido para compatibilidade com dados históricos.
  */
 export type TipoPlano = "Mensal" | "Trimestral" | "Semestral" | "Anual";
+
+/**
+ * Formas de pagamento disponíveis no cadastro de alunos.
+ */
+export type MetodoPagamentoCadastro = "pix" | "dinheiro";
 
 /**
  * Interface principal do Aluno.
@@ -42,8 +47,8 @@ export interface Aluno {
   telefone: string;
   /** Data da matrícula em formato ISO (YYYY-MM-DD) */
   dataMatricula: string;
-  /** Tipo do plano atual */
-  plano: TipoPlano;
+  /** @deprecated Planos múltiplos removidos. Campo mantido para dados históricos. */
+  plano?: TipoPlano;
   /** Status atual do aluno */
   status: StatusAluno;
   /** Data do próximo vencimento em formato ISO */
@@ -144,6 +149,7 @@ export const STATUS_ALUNO_CONFIG: Record<
 
 /**
  * Configuração dos planos disponíveis.
+ * @deprecated Mantido para compatibilidade com dados históricos. Novos alunos usam mensalidade única.
  */
 export const PLANOS_CONFIG: Record<TipoPlano, { label: string; meses: number }> = {
   Mensal: { label: "Mensal", meses: 1 },
@@ -151,6 +157,15 @@ export const PLANOS_CONFIG: Record<TipoPlano, { label: string; meses: number }> 
   Semestral: { label: "Semestral", meses: 6 },
   Anual: { label: "Anual", meses: 12 },
 };
+
+/**
+ * Mensalidade padrão única do sistema.
+ * Primeiro mês: R$ 50,00 — a partir do segundo mês: R$ 65,00/mês.
+ */
+export const MENSALIDADE_PADRAO = {
+  primeiroMes: 50.0,
+  mensalRecorrente: 65.0,
+} as const;
 
 /**
  * Parâmetros de filtro para listagem de alunos.
@@ -161,30 +176,30 @@ export interface FiltrosAluno {
   busca?: string;
   /** Filtrar por status (múltiplos) */
   status?: StatusAluno[];
-  /** Filtrar por plano */
-  plano?: TipoPlano;
   /** Filtrar por personal */
   personalId?: string;
 }
 
 /**
  * Dados para criação de novo aluno (wizard passo 1).
+ * Campos obrigatórios: nome, email e data de nascimento.
+ * Campos opcionais: telefone, cpf.
  */
 export interface NovoAlunoDadosBasicos {
   nome: string;
   email: string;
-  telefone: string;
-  cpf: string;
   dataNascimento: string;
-  endereco: AlunoDetalhes["endereco"];
+  telefone?: string;
+  cpf?: string;
 }
 
 /**
- * Dados do plano para criação de novo aluno (wizard passo 2).
+ * Dados de pagamento para criação de novo aluno (wizard passo 2).
+ * O sistema usa mensalidade única: R$50 no 1º mês, R$65 a partir do 2º.
  */
 export interface NovoAlunoPlano {
-  plano: TipoPlano;
   dataInicio: string;
+  metodoPagamento: MetodoPagamentoCadastro;
   personalId?: string;
   observacoesMedicas?: string;
 }

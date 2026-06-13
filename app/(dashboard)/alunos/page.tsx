@@ -39,7 +39,7 @@ import {
   Aluno,
   FiltrosAluno,
   NovoAlunoData,
-  PLANOS_CONFIG,
+  MENSALIDADE_PADRAO,
 } from "@/types/aluno";
 
 // ============ DADOS MOCK ============
@@ -282,11 +282,6 @@ export default function AlunosPage() {
         if (!filtros.status.includes(aluno.status)) return false;
       }
 
-      // Filtro de plano
-      if (filtros.plano && aluno.plano !== filtros.plano) {
-        return false;
-      }
-
       // Filtro de personal
       if (filtros.personalId) {
         if (filtros.personalId === "sem_personal") {
@@ -395,6 +390,7 @@ export default function AlunosPage() {
 
   /**
    * Salva novo aluno — entra no topo da lista.
+   * Registra método de pagamento e aplica mensalidade padrão.
    * TODO: Chamar API POST /alunos.
    */
   const handleSaveNovoAluno = useCallback(async (data: NovoAlunoData) => {
@@ -402,18 +398,18 @@ export default function AlunosPage() {
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     const personal = MOCK_PERSONAIS.find((p) => p.id === data.personalId);
+    // Próximo vencimento: 1 mês após o início (mensalidade padrão)
     const vencimento = addMonths(
       new Date(`${data.dataInicio}T12:00:00`),
-      PLANOS_CONFIG[data.plano].meses
+      1
     );
 
     const novoAluno: Aluno = {
       id: crypto.randomUUID(),
       nome: data.nome,
       email: data.email,
-      telefone: data.telefone,
+      telefone: data.telefone || "",
       dataMatricula: data.dataInicio,
-      plano: data.plano,
       status: "ativo",
       proximoVencimento: format(vencimento, "yyyy-MM-dd"),
       personalId: data.personalId ?? null,
@@ -422,11 +418,12 @@ export default function AlunosPage() {
 
     setAlunos((prev) => [novoAluno, ...prev]);
     setPaginaAtual(1);
+
+    const metodoPagamentoLabel =
+      data.metodoPagamento === "pix" ? "PIX" : "Dinheiro";
+
     toast.success(`${data.nome} matriculado(a) com sucesso!`, {
-      description: `Plano ${data.plano} — primeiro vencimento em ${format(
-        vencimento,
-        "dd/MM/yyyy"
-      )}.`,
+      description: `1º mês: R$ ${MENSALIDADE_PADRAO.primeiroMes.toFixed(2).replace(".", ",")} via ${metodoPagamentoLabel}. A partir do 2º mês: R$ ${MENSALIDADE_PADRAO.mensalRecorrente.toFixed(2).replace(".", ",")}/mês.`,
     });
   }, []);
 

@@ -2,19 +2,20 @@
  * ============================================================================
  * COMPONENTE: MODAL DE CADASTRO DE ALUNO (Wizard)
  * ============================================================================
- * 
+ *
  * Formulário de cadastro em 3 passos:
- * 1. Dados Básicos - Nome, email, telefone, CPF, nascimento, endereço
- * 2. Plano - Tipo de plano, data início, personal, obs. médicas
+ * 1. Dados Básicos - Nome, email, data de nascimento
+ * 2. Pagamento - Forma de pagamento (PIX/Dinheiro), data início, personal
  * 3. Confirmação - Revisão dos dados antes de salvar
- * 
+ *
+ * MENSALIDADE PADRÃO:
+ * - 1º mês: R$ 50,00
+ * - A partir do 2º mês: R$ 65,00/mês
+ *
  * VALIDAÇÃO:
  * - Zod schema em cada passo
  * - Não avança sem validar
  * - Botão "Salvar" desabilitado até passo final
- * 
- * TIP: Use react-hook-form + zod para validação robusta.
- * Sempre valide também no backend!
  */
 
 "use client";
@@ -28,7 +29,8 @@ import {
   ArrowRight,
   Check,
   User,
-  CreditCard,
+  Banknote,
+  QrCode,
   ClipboardCheck,
   Loader2,
 } from "lucide-react";
@@ -51,16 +53,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { TipoPlano, PLANOS_CONFIG, NovoAlunoData } from "@/types/aluno";
+import { MetodoPagamentoCadastro, NovoAlunoData, MENSALIDADE_PADRAO } from "@/types/aluno";
 
 // ============ SCHEMAS DE VALIDAÇÃO (Zod) ============
 
 /**
  * Schema do Passo 1 - Dados Básicos.
- * 
- * TIP: Regex de CPF valida apenas formato, não dígitos verificadores.
- * Implemente validação completa de CPF no backend.
+ * Campos obrigatórios: nome, email, data de nascimento.
  */
 const dadosBasicosSchema = z.object({
   nome: z
@@ -68,31 +67,27 @@ const dadosBasicosSchema = z.object({
     .min(3, "Nome deve ter pelo menos 3 caracteres")
     .max(100, "Nome muito longo"),
   email: z.string().email("Email inválido"),
+  dataNascimento: z.string().min(1, "Data de nascimento obrigatória"),
   telefone: z
     .string()
-    .min(10, "Telefone inválido")
-    .regex(/^\(\d{2}\)\s?\d{4,5}-?\d{4}$/, "Formato: (11) 99999-9999"),
+    .regex(/^\(\d{2}\)\s?\d{4,5}-?\d{4}$/, "Formato: (11) 99999-9999")
+    .optional()
+    .or(z.literal("")),
   cpf: z
     .string()
-    .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato: 000.000.000-00"),
-  dataNascimento: z.string().min(1, "Data de nascimento obrigatória"),
-  endereco: z.object({
-    cep: z.string().regex(/^\d{5}-?\d{3}$/, "CEP inválido"),
-    logradouro: z.string().min(3, "Logradouro obrigatório"),
-    numero: z.string().min(1, "Número obrigatório"),
-    complemento: z.string().optional(),
-    bairro: z.string().min(2, "Bairro obrigatório"),
-    cidade: z.string().min(2, "Cidade obrigatória"),
-    estado: z.string().length(2, "Use sigla do estado (ex: SP)"),
-  }),
+    .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato: 000.000.000-00")
+    .optional()
+    .or(z.literal("")),
 });
 
 /**
- * Schema do Passo 2 - Plano.
+ * Schema do Passo 2 - Pagamento.
  */
 const planoSchema = z.object({
-  plano: z.enum(["Mensal", "Trimestral", "Semestral", "Anual"]),
   dataInicio: z.string().min(1, "Data de início obrigatória"),
+  metodoPagamento: z.enum(["pix", "dinheiro"], {
+    required_error: "Selecione a forma de pagamento",
+  }),
   personalId: z.string().optional(),
   observacoesMedicas: z.string().optional(),
 });
@@ -119,7 +114,7 @@ interface NovoAlunoModalProps {
  */
 const PASSOS = [
   { numero: 1, titulo: "Dados Básicos", icon: User },
-  { numero: 2, titulo: "Plano", icon: CreditCard },
+  { numero: 2, titulo: "Pagamento", icon: Banknote },
   { numero: 3, titulo: "Confirmação", icon: ClipboardCheck },
 ];
 
@@ -144,18 +139,9 @@ export function NovoAlunoModal({
     defaultValues: dadosBasicos || {
       nome: "",
       email: "",
+      dataNascimento: "",
       telefone: "",
       cpf: "",
-      dataNascimento: "",
-      endereco: {
-        cep: "",
-        logradouro: "",
-        numero: "",
-        complemento: "",
-        bairro: "",
-        cidade: "",
-        estado: "",
-      },
     },
   });
 
@@ -163,8 +149,8 @@ export function NovoAlunoModal({
   const formPasso2 = useForm<PlanoForm>({
     resolver: zodResolver(planoSchema),
     defaultValues: dadosPlano || {
-      plano: "Mensal",
       dataInicio: new Date().toISOString().split("T")[0],
+      metodoPagamento: undefined,
       personalId: "",
       observacoesMedicas: "",
     },
@@ -212,7 +198,7 @@ export function NovoAlunoModal({
         ...dadosBasicos,
         ...dadosPlano,
       });
-      
+
       // Reseta e fecha
       resetForm();
       onOpenChange(false);
@@ -272,7 +258,7 @@ export function NovoAlunoModal({
                     }`}
                   />
                 )}
-                
+
                 {/* Círculo do passo */}
                 <div
                   className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors ${
@@ -319,7 +305,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div>
+              <div className="col-span-2">
                 <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
@@ -334,8 +320,22 @@ export function NovoAlunoModal({
                 )}
               </div>
 
+              <div className="col-span-2">
+                <Label htmlFor="dataNascimento">Data de nascimento *</Label>
+                <Input
+                  id="dataNascimento"
+                  type="date"
+                  {...formPasso1.register("dataNascimento")}
+                />
+                {formPasso1.formState.errors.dataNascimento && (
+                  <p className="text-sm text-destructive mt-1">
+                    {formPasso1.formState.errors.dataNascimento.message}
+                  </p>
+                )}
+              </div>
+
               <div>
-                <Label htmlFor="telefone">Telefone *</Label>
+                <Label htmlFor="telefone">Telefone</Label>
                 <Input
                   id="telefone"
                   {...formPasso1.register("telefone")}
@@ -349,7 +349,7 @@ export function NovoAlunoModal({
               </div>
 
               <div>
-                <Label htmlFor="cpf">CPF *</Label>
+                <Label htmlFor="cpf">CPF</Label>
                 <Input
                   id="cpf"
                   {...formPasso1.register("cpf")}
@@ -361,153 +361,61 @@ export function NovoAlunoModal({
                   </p>
                 )}
               </div>
-
-              <div>
-                <Label htmlFor="dataNascimento">Data de nascimento *</Label>
-                <Input
-                  id="dataNascimento"
-                  type="date"
-                  {...formPasso1.register("dataNascimento")}
-                />
-                {formPasso1.formState.errors.dataNascimento && (
-                  <p className="text-sm text-destructive mt-1">
-                    {formPasso1.formState.errors.dataNascimento.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            <h4 className="font-medium">Endereço</h4>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="cep">CEP *</Label>
-                <Input
-                  id="cep"
-                  {...formPasso1.register("endereco.cep")}
-                  placeholder="00000-000"
-                />
-                {formPasso1.formState.errors.endereco?.cep && (
-                  <p className="text-sm text-destructive mt-1">
-                    {formPasso1.formState.errors.endereco.cep.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="col-span-2">
-                <Label htmlFor="logradouro">Logradouro *</Label>
-                <Input
-                  id="logradouro"
-                  {...formPasso1.register("endereco.logradouro")}
-                  placeholder="Rua, Avenida, etc."
-                />
-                {formPasso1.formState.errors.endereco?.logradouro && (
-                  <p className="text-sm text-destructive mt-1">
-                    {formPasso1.formState.errors.endereco.logradouro.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="numero">Número *</Label>
-                <Input
-                  id="numero"
-                  {...formPasso1.register("endereco.numero")}
-                  placeholder="123"
-                />
-                {formPasso1.formState.errors.endereco?.numero && (
-                  <p className="text-sm text-destructive mt-1">
-                    {formPasso1.formState.errors.endereco.numero.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="col-span-2">
-                <Label htmlFor="complemento">Complemento</Label>
-                <Input
-                  id="complemento"
-                  {...formPasso1.register("endereco.complemento")}
-                  placeholder="Apto, Bloco, etc."
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="bairro">Bairro *</Label>
-                <Input
-                  id="bairro"
-                  {...formPasso1.register("endereco.bairro")}
-                  placeholder="Centro"
-                />
-                {formPasso1.formState.errors.endereco?.bairro && (
-                  <p className="text-sm text-destructive mt-1">
-                    {formPasso1.formState.errors.endereco.bairro.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="cidade">Cidade *</Label>
-                <Input
-                  id="cidade"
-                  {...formPasso1.register("endereco.cidade")}
-                  placeholder="São Paulo"
-                />
-                {formPasso1.formState.errors.endereco?.cidade && (
-                  <p className="text-sm text-destructive mt-1">
-                    {formPasso1.formState.errors.endereco.cidade.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="estado">Estado *</Label>
-                <Input
-                  id="estado"
-                  {...formPasso1.register("endereco.estado")}
-                  placeholder="SP"
-                  maxLength={2}
-                />
-                {formPasso1.formState.errors.endereco?.estado && (
-                  <p className="text-sm text-destructive mt-1">
-                    {formPasso1.formState.errors.endereco.estado.message}
-                  </p>
-                )}
-              </div>
             </div>
           </form>
         )}
 
-        {/* ============ PASSO 2: PLANO ============ */}
+        {/* ============ PASSO 2: PAGAMENTO ============ */}
         {passoAtual === 2 && (
           <form className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="plano">Plano *</Label>
-                <Select
-                  value={formPasso2.watch("plano")}
-                  onValueChange={(v) => formPasso2.setValue("plano", v as TipoPlano)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o plano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(PLANOS_CONFIG) as TipoPlano[]).map((plano) => (
-                      <SelectItem key={plano} value={plano}>
-                        {PLANOS_CONFIG[plano].label} ({PLANOS_CONFIG[plano].meses} meses)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formPasso2.formState.errors.plano && (
+              {/* Mensalidade informativa */}
+              <div className="col-span-2 rounded-lg bg-muted/50 p-3 text-sm">
+                <p className="font-medium mb-1">Mensalidade padrão</p>
+                <p className="text-muted-foreground">
+                  1º mês: <span className="font-medium text-foreground">R$ {MENSALIDADE_PADRAO.primeiroMes.toFixed(2).replace(".", ",")}</span>
+                  {" · "}
+                  A partir do 2º mês: <span className="font-medium text-foreground">R$ {MENSALIDADE_PADRAO.mensalRecorrente.toFixed(2).replace(".", ",")}/mês</span>
+                </p>
+              </div>
+
+              {/* Seleção de forma de pagamento */}
+              <div className="col-span-2">
+                <Label>Forma de pagamento da mensalidade *</Label>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  {(["pix", "dinheiro"] as const).map((metodo) => {
+                    const isSelected = formPasso2.watch("metodoPagamento") === metodo;
+                    const Icon = metodo === "pix" ? QrCode : Banknote;
+                    const label = metodo === "pix" ? "PIX" : "Dinheiro";
+                    return (
+                      <button
+                        key={metodo}
+                        type="button"
+                        onClick={() =>
+                          formPasso2.setValue("metodoPagamento", metodo, {
+                            shouldValidate: true,
+                          })
+                        }
+                        className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition-colors cursor-pointer ${
+                          isSelected
+                            ? "border-primary bg-primary/5 text-primary"
+                            : "border-muted hover:border-muted-foreground/50"
+                        }`}
+                      >
+                        <Icon className="h-6 w-6" />
+                        <span className="font-medium text-sm">{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {formPasso2.formState.errors.metodoPagamento && (
                   <p className="text-sm text-destructive mt-1">
-                    {formPasso2.formState.errors.plano.message}
+                    {formPasso2.formState.errors.metodoPagamento.message}
                   </p>
                 )}
               </div>
 
-              <div>
+              <div className="col-span-2">
                 <Label htmlFor="dataInicio">Data de início *</Label>
                 <Input
                   id="dataInicio"
@@ -568,65 +476,62 @@ export function NovoAlunoModal({
               <div>
                 <h4 className="font-medium mb-2">Dados Pessoais</h4>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
+                  <div className="col-span-2">
                     <dt className="text-muted-foreground">Nome</dt>
                     <dd>{dadosBasicos.nome}</dd>
                   </div>
-                  <div>
+                  <div className="col-span-2">
                     <dt className="text-muted-foreground">Email</dt>
                     <dd>{dadosBasicos.email}</dd>
                   </div>
-                  <div>
-                    <dt className="text-muted-foreground">Telefone</dt>
-                    <dd>{dadosBasicos.telefone}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">CPF</dt>
-                    <dd>{dadosBasicos.cpf}</dd>
-                  </div>
-                  <div>
+                  <div className="col-span-2">
                     <dt className="text-muted-foreground">Nascimento</dt>
                     <dd>{dadosBasicos.dataNascimento}</dd>
                   </div>
+                  {dadosBasicos.telefone && (
+                    <div>
+                      <dt className="text-muted-foreground">Telefone</dt>
+                      <dd>{dadosBasicos.telefone}</dd>
+                    </div>
+                  )}
+                  {dadosBasicos.cpf && (
+                    <div>
+                      <dt className="text-muted-foreground">CPF</dt>
+                      <dd>{dadosBasicos.cpf}</dd>
+                    </div>
+                  )}
                 </dl>
               </div>
 
               <Separator />
 
               <div>
-                <h4 className="font-medium mb-2">Endereço</h4>
-                <p className="text-sm">
-                  {dadosBasicos.endereco.logradouro}, {dadosBasicos.endereco.numero}
-                  {dadosBasicos.endereco.complemento && ` - ${dadosBasicos.endereco.complemento}`}
-                  <br />
-                  {dadosBasicos.endereco.bairro}, {dadosBasicos.endereco.cidade} -{" "}
-                  {dadosBasicos.endereco.estado}
-                  <br />
-                  CEP: {dadosBasicos.endereco.cep}
-                </p>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="font-medium mb-2">Plano</h4>
+                <h4 className="font-medium mb-2">Pagamento & Início</h4>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <dt className="text-muted-foreground">Tipo</dt>
-                    <dd>
-                      <Badge variant="secondary">{dadosPlano.plano}</Badge>
+                    <dt className="text-muted-foreground">Forma de pagamento</dt>
+                    <dd className="font-medium">
+                      {dadosPlano.metodoPagamento === "pix" ? "PIX" : "Dinheiro"}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Início</dt>
                     <dd>{dadosPlano.dataInicio}</dd>
                   </div>
+                  <div>
+                    <dt className="text-muted-foreground">1º mês</dt>
+                    <dd className="font-medium text-green-600">R$ 50,00</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">A partir do 2º mês</dt>
+                    <dd className="font-medium">R$ 65,00/mês</dd>
+                  </div>
                   {dadosPlano.personalId && (
                     <div className="col-span-2">
                       <dt className="text-muted-foreground">Personal</dt>
                       <dd>
                         {personais.find((p) => p.id === dadosPlano.personalId)?.nome ||
-                          "Não selecionado"}
+                          "Não encontrado"}
                       </dd>
                     </div>
                   )}

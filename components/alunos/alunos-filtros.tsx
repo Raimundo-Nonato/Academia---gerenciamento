@@ -40,9 +40,7 @@ import {
 import {
   FiltrosAluno,
   StatusAluno,
-  TipoPlano,
   STATUS_ALUNO_CONFIG,
-  PLANOS_CONFIG,
 } from "@/types/aluno";
 
 /**
@@ -115,7 +113,6 @@ export function AlunosFiltros({
     return !!(
       filtros.busca ||
       (filtros.status && filtros.status.length > 0) ||
-      filtros.plano ||
       filtros.personalId
     );
   }, [filtros]);
@@ -213,29 +210,6 @@ export function AlunosFiltros({
             </div>
           </PopoverContent>
         </Popover>
-
-        {/* Filtro de Plano */}
-        <Select
-          value={filtros.plano || "todos"}
-          onValueChange={(value) =>
-            onFiltrosChange({
-              ...filtros,
-              plano: value === "todos" ? undefined : (value as TipoPlano),
-            })
-          }
-        >
-          <SelectTrigger className="w-full md:w-[160px]">
-            <SelectValue placeholder="Plano" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos os planos</SelectItem>
-            {(Object.keys(PLANOS_CONFIG) as TipoPlano[]).map((plano) => (
-              <SelectItem key={plano} value={plano}>
-                {PLANOS_CONFIG[plano].label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         {/* Filtro de Personal */}
         <Select

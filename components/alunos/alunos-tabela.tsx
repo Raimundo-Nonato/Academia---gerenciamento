@@ -330,7 +330,6 @@ export function AlunosTabela({
             </TableHead>
             <TableHead>Nome</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Plano</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Próx. Vencimento</TableHead>
             <TableHead className="w-12">
@@ -387,11 +386,6 @@ export function AlunosTabela({
                       {aluno.telefone}
                     </div>
                   </div>
-                </TableCell>
-
-                {/* Plano */}
-                <TableCell>
-                  <span className="text-sm">{aluno.plano}</span>
                 </TableCell>
 
                 {/* Status com badge colorido */}

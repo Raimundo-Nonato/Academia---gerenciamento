@@ -232,8 +232,6 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
                 >
                   {STATUS_ALUNO_CONFIG[aluno.status].label}
                 </Badge>
-                <span className="text-muted-foreground">•</span>
-                <span>{aluno.plano}</span>
               </SheetDescription>
             </div>
           </div>
@@ -370,8 +368,8 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Tipo</p>
-                  <p className="font-medium">{aluno.plano}</p>
+                  <p className="text-muted-foreground">Mensalidade</p>
+                  <p className="font-medium">Padrão</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Valor</p>
