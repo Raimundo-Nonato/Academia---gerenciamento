@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { Sidebar, SidebarContent } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { SessionExpiringBanner } from "@/components/layout/session-expiring-banner";
+import { AccessGuard } from "@/components/auth/access-guard";
 import {
   Sheet,
   SheetContent,
@@ -105,7 +106,8 @@ export function DashboardLayout({
           id="conteudo-principal"
           className="mx-auto max-w-[1440px] p-4 md:p-6 lg:p-8"
         >
-          {children}
+          {/* Bloqueia páginas inteiras conforme o nível exigido pela rota */}
+          <AccessGuard>{children}</AccessGuard>
         </main>
       </div>
     </div>

@@ -17,6 +17,7 @@
  * TODO: Adicionar filtros de período
  */
 
+import { useState } from "react";
 import {
   FileText,
   Download,
@@ -30,6 +31,10 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  RelatorioViewer,
+  type RelatorioMeta,
+} from "@/components/relatorios/relatorio-viewer";
 
 // Tipos de relatórios disponíveis
 const RELATORIOS = [
@@ -78,16 +83,15 @@ const RELATORIOS = [
 ];
 
 export default function RelatoriosPage() {
+  // Relatório aberto no visualizador (null = fechado)
+  const [relatorioAberto, setRelatorioAberto] = useState<RelatorioMeta | null>(null);
+
   /**
-   * Gera um relatório (simulado).
-   * TODO: Implementar geração real no backend (PDF/Excel)
+   * Abre o visualizador com o relatório selecionado.
+   * O mesmo modelo (RelatorioViewer) se adapta a cada tipo.
    */
-  const handleGerarRelatorio = (titulo: string) => {
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1500)), {
-      loading: `Gerando relatório "${titulo}"...`,
-      success: `Relatório "${titulo}" gerado com sucesso!`,
-      error: "Falha ao gerar o relatório.",
-    });
+  const handleVisualizar = (relatorio: RelatorioMeta) => {
+    setRelatorioAberto(relatorio);
   };
 
   /**
@@ -129,7 +133,13 @@ export default function RelatoriosPage() {
                   <Button
                     variant="outline"
                     className="flex-1"
-                    onClick={() => handleGerarRelatorio(relatorio.titulo)}
+                    onClick={() =>
+                      handleVisualizar({
+                        id: relatorio.id,
+                        titulo: relatorio.titulo,
+                        descricao: relatorio.descricao,
+                      })
+                    }
                   >
                     <FileText className="mr-2 h-4 w-4" />
                     Visualizar
@@ -188,6 +198,12 @@ export default function RelatoriosPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ============ VISUALIZADOR (modelo único, adapta por tipo) ============ */}
+      <RelatorioViewer
+        relatorio={relatorioAberto}
+        onOpenChange={(open) => !open && setRelatorioAberto(null)}
+      />
     </>
   );
 }
