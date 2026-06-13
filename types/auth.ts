@@ -65,6 +65,13 @@ export interface AuthContextType {
   isLoading: boolean;
   /** Função para logout */
   logout: () => void;
+  /**
+   * Troca o role do usuário logado.
+   * APENAS PARA DEMONSTRAÇÃO enquanto não há backend — permite testar
+   * as permissões (RoleGate) sem trocar de conta.
+   * TODO: Remover quando a autenticação real for integrada.
+   */
+  switchRole: (role: UserRole) => void;
 }
 
 /**

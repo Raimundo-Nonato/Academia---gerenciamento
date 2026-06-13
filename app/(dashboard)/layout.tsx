@@ -31,12 +31,6 @@ export default function DashboardLayoutWrapper({
     <AuthProvider>
       <TooltipProvider>
         <DashboardLayout
-          // TODO: Conectar com sistema real de notificações
-          notificationCount={3}
-          onNotificationClick={() => {
-            // TODO: Abrir painel de notificações
-            console.log("Abrir notificações");
-          }}
           // TODO: Conectar com verificação real de sessão
           showSessionBanner={false}
           sessionMinutesRemaining={5}

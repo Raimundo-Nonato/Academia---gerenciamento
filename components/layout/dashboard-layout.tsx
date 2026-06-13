@@ -4,38 +4,39 @@
  * ============================================================================
  * COMPONENTE DASHBOARD LAYOUT
  * ============================================================================
- * 
+ *
  * Layout principal do sistema de gestão.
  * Combina Sidebar, Topbar e área de conteúdo.
- * 
- * ESTRUTURA:
+ *
+ * ESTRUTURA (desktop):
  * ┌────────────────────────────────────────────────────┐
- * │ [SESSION EXPIRING BANNER - slot opcional]         │
+ * │ [SESSION EXPIRING BANNER - slot opcional]          │
  * ├──────────┬─────────────────────────────────────────┤
- * │          │  TOPBAR (breadcrumb, notif, avatar)    │
+ * │          │  TOPBAR (breadcrumb, tema, notif)       │
  * │          ├─────────────────────────────────────────┤
- * │ SIDEBAR  │                                         │
- * │          │  CONTEÚDO                               │
- * │          │  (children)                             │
- * │          │                                         │
+ * │ SIDEBAR  │  CONTEÚDO (children)                    │
  * └──────────┴─────────────────────────────────────────┘
- * 
- * TIP: A sidebar colapsa de 240px para 64px, e o conteúdo
- * ajusta seu margin-left automaticamente.
+ *
+ * RESPONSIVIDADE:
+ * - lg+: sidebar fixa (colapsável 240px ↔ 64px), conteúdo com margem
+ * - <lg: sidebar vira drawer (Sheet) aberto pelo botão de menu da topbar
  */
 
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { Sidebar } from "@/components/layout/sidebar";
+import { Sidebar, SidebarContent } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { SessionExpiringBanner } from "@/components/layout/session-expiring-banner";
+import { AccessGuard } from "@/components/auth/access-guard";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  /** Contagem de notificações para o topbar */
-  notificationCount?: number;
-  /** Callback ao clicar em notificações */
-  onNotificationClick?: () => void;
   /** Se deve mostrar banner de sessão expirando */
   showSessionBanner?: boolean;
   /** Minutos restantes da sessão */
@@ -46,19 +47,27 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({
   children,
-  notificationCount = 0,
-  onNotificationClick,
   showSessionBanner = false,
   sessionMinutesRemaining = 5,
   onRenewSession,
 }: DashboardLayoutProps) {
-  // Estado de colapso da sidebar
+  // Estado de colapso da sidebar (desktop)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Drawer da sidebar (mobile)
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   // Estado local do banner (pode ser dispensado pelo usuário)
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Skip link: primeiro elemento focável, melhora navegação por teclado */}
+      <a
+        href="#conteudo-principal"
+        className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        Pular para o conteúdo
+      </a>
+
       {/* ============ BANNER DE SESSÃO EXPIRANDO ============ */}
       <SessionExpiringBanner
         isVisible={showSessionBanner && !isBannerDismissed}
@@ -67,27 +76,38 @@ export function DashboardLayout({
         onRenewSession={onRenewSession}
       />
 
-      {/* ============ SIDEBAR ============ */}
+      {/* ============ SIDEBAR DESKTOP (lg+) ============ */}
       <Sidebar onCollapsedChange={setIsSidebarCollapsed} />
+
+      {/* ============ SIDEBAR MOBILE (drawer) ============ */}
+      <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
+        <SheetContent
+          side="left"
+          className="w-72 border-sidebar-border bg-sidebar p-0 [&>button]:text-sidebar-foreground"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Menu de navegação</SheetTitle>
+          </SheetHeader>
+          <SidebarContent onNavigate={() => setIsMobileNavOpen(false)} />
+        </SheetContent>
+      </Sheet>
 
       {/* ============ CONTEÚDO PRINCIPAL ============ */}
       <div
         className={cn(
-          // Transição suave ao colapsar sidebar
           "transition-all duration-300",
-          // Ajusta margin baseado no estado da sidebar
-          isSidebarCollapsed ? "ml-16" : "ml-60"
+          // Sem margem no mobile; margem conforme sidebar no desktop
+          isSidebarCollapsed ? "lg:ml-16" : "lg:ml-60"
         )}
       >
-        {/* Topbar */}
-        <Topbar
-          notificationCount={notificationCount}
-          onNotificationClick={onNotificationClick}
-        />
+        <Topbar onMenuClick={() => setIsMobileNavOpen(true)} />
 
-        {/* Área de conteúdo com padding generoso */}
-        <main className="p-6">
-          {children}
+        <main
+          id="conteudo-principal"
+          className="mx-auto max-w-[1440px] p-4 md:p-6 lg:p-8"
+        >
+          {/* Bloqueia páginas inteiras conforme o nível exigido pela rota */}
+          <AccessGuard>{children}</AccessGuard>
         </main>
       </div>
     </div>

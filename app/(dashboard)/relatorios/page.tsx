@@ -17,18 +17,24 @@
  * TODO: Adicionar filtros de período
  */
 
-import { 
-  FileText, 
-  Download, 
-  TrendingUp, 
-  Users, 
-  DollarSign, 
+import { useState } from "react";
+import {
+  FileText,
+  Download,
+  TrendingUp,
+  Users,
+  DollarSign,
   Calendar,
   BarChart3,
 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  RelatorioViewer,
+  type RelatorioMeta,
+} from "@/components/relatorios/relatorio-viewer";
 
 // Tipos de relatórios disponíveis
 const RELATORIOS = [
@@ -77,9 +83,25 @@ const RELATORIOS = [
 ];
 
 export default function RelatoriosPage() {
-  const handleGerarRelatorio = (relatorioId: string) => {
-    // TODO: Implementar geração de relatório
-    console.log(`Gerando relatório: ${relatorioId}`);
+  // Relatório aberto no visualizador (null = fechado)
+  const [relatorioAberto, setRelatorioAberto] = useState<RelatorioMeta | null>(null);
+
+  /**
+   * Abre o visualizador com o relatório selecionado.
+   * O mesmo modelo (RelatorioViewer) se adapta a cada tipo.
+   */
+  const handleVisualizar = (relatorio: RelatorioMeta) => {
+    setRelatorioAberto(relatorio);
+  };
+
+  /**
+   * Baixa um relatório (simulado).
+   * TODO: Servir arquivo real do backend
+   */
+  const handleDownload = (nome: string) => {
+    toast.info(`Download de "${nome}" disponível em breve`, {
+      description: "Funcionalidade aguardando integração com o backend.",
+    });
   };
 
   return (
@@ -108,15 +130,26 @@ export default function RelatoriosPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="flex-1"
-                    onClick={() => handleGerarRelatorio(relatorio.id)}
+                    onClick={() =>
+                      handleVisualizar({
+                        id: relatorio.id,
+                        titulo: relatorio.titulo,
+                        descricao: relatorio.descricao,
+                      })
+                    }
                   >
                     <FileText className="mr-2 h-4 w-4" />
                     Visualizar
                   </Button>
-                  <Button variant="outline" size="icon">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleDownload(relatorio.titulo)}
+                    aria-label={`Baixar relatório ${relatorio.titulo}`}
+                  >
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
@@ -152,7 +185,12 @@ export default function RelatoriosPage() {
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDownload(relatorio.nome)}
+                  aria-label={`Baixar ${relatorio.nome}`}
+                >
                   <Download className="h-4 w-4" />
                 </Button>
               </div>
@@ -160,6 +198,12 @@ export default function RelatoriosPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ============ VISUALIZADOR (modelo único, adapta por tipo) ============ */}
+      <RelatorioViewer
+        relatorio={relatorioAberto}
+        onOpenChange={(open) => !open && setRelatorioAberto(null)}
+      />
     </>
   );
 }

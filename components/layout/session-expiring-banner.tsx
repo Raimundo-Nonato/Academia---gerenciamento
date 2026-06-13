@@ -42,8 +42,8 @@ export function SessionExpiringBanner({
     <div
       className={cn(
         "fixed left-0 right-0 top-0 z-50 flex items-center justify-between gap-4 bg-amber-500 px-4 py-2 text-amber-950",
-        // Ajusta posição considerando a sidebar
-        "md:left-60"
+        // Ajusta posição considerando a sidebar (visível apenas em lg+)
+        "lg:left-60"
       )}
       role="alert"
       aria-live="polite"

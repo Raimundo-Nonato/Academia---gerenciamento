@@ -12,7 +12,7 @@
  */
 
 export { DashboardLayout } from "./dashboard-layout";
-export { Sidebar } from "./sidebar";
+export { Sidebar, SidebarContent } from "./sidebar";
 export { Topbar } from "./topbar";
 export { PageHeader } from "./page-header";
 export { SessionExpiringBanner } from "./session-expiring-banner";

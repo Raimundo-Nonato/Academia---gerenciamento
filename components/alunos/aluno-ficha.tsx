@@ -215,7 +215,7 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader className="space-y-4 pb-4">
+        <SheetHeader className="space-y-4 px-6 pb-2 pt-6">
           {/* Header com avatar e info básica */}
           <div className="flex items-start gap-4">
             <Avatar className="h-16 w-16">
@@ -240,7 +240,8 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
         </SheetHeader>
 
         {/* ============ ABAS ============ */}
-        <Tabs defaultValue="dados" className="mt-4">
+        {/* px-6: alinha o conteúdo das abas com o padding do header */}
+        <Tabs defaultValue="dados" className="px-6 pb-8">
           <TabsList className={`w-full grid ${canAccessFinance ? "grid-cols-3" : "grid-cols-2"}`}>
             <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
             {/* Aba Financeiro só aparece para gerente+ */}
