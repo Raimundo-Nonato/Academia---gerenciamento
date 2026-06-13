@@ -18,8 +18,6 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Calendar,
-  Clock,
   AlertCircle,
   Activity,
 } from "lucide-react";
@@ -37,7 +35,6 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout";
 import { RoleGate } from "@/components/auth/role-gate";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -173,72 +170,6 @@ function MovimentacaoChart() {
 }
 
 /**
- * Lista de próximas atividades/agendamentos.
- */
-function UpcomingActivities() {
-  // TODO: Substituir por dados da API
-  const activities = [
-    { time: "09:00", title: "Avaliação Física - João Silva", type: "avaliacao" },
-    { time: "10:30", title: "Reunião Equipe", type: "reuniao" },
-    { time: "14:00", title: "Treino Experimental - Maria", type: "treino" },
-    { time: "16:00", title: "Manutenção Equipamentos", type: "manutencao" },
-  ];
-
-  const typeConfig: Record<string, { label: string; className: string; dot: string }> = {
-    avaliacao: { label: "Avaliação", className: "bg-primary/10 text-primary", dot: "bg-primary" },
-    reuniao: { label: "Reunião", className: "bg-chart-4/10 text-chart-4", dot: "bg-chart-4" },
-    treino: { label: "Treino", className: "bg-success/10 text-success", dot: "bg-success" },
-    manutencao: { label: "Manutenção", className: "bg-warning/10 text-warning", dot: "bg-warning" },
-  };
-
-  return (
-    <Card className="rise" style={{ animationDelay: "360ms" }}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          Agenda de Hoje
-        </CardTitle>
-        <CardDescription>Próximas atividades programadas</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-1">
-          {activities.map((activity, index) => {
-            const config = typeConfig[activity.type];
-            const isLast = index === activities.length - 1;
-
-            return (
-              <div key={index} className="flex gap-3">
-                {/* Trilho da timeline */}
-                <div className="flex flex-col items-center">
-                  <span
-                    className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", config.dot)}
-                    aria-hidden
-                  />
-                  {!isLast && <span className="w-px flex-1 bg-border" aria-hidden />}
-                </div>
-
-                <div className="flex flex-1 items-center justify-between gap-2 pb-5">
-                  <div>
-                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
-                      <Clock className="h-3 w-3" />
-                      {activity.time}
-                    </p>
-                    <p className="mt-0.5 text-sm font-medium">{activity.title}</p>
-                  </div>
-                  <Badge variant="secondary" className={config.className}>
-                    {config.label}
-                  </Badge>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
  * Lista de alertas/pendências.
  */
 function AlertsList() {
@@ -334,9 +265,8 @@ export default function DashboardPage() {
         <AlertsList />
       </div>
 
-      {/* ============ AGENDA + RESUMO FINANCEIRO ============ */}
+      {/* ============ RESUMO FINANCEIRO ============ */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <UpcomingActivities />
 
         {/* Resumo financeiro - apenas gerente+ */}
         <RoleGate minLevel={60}>
