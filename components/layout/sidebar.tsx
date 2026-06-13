@@ -25,11 +25,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  UserCog,
   DollarSign,
-  Calendar,
-  BarChart3,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -63,21 +59,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Alunos", href: "/alunos", icon: Users },
-      { label: "Agenda", href: "/agenda", icon: Calendar },
-    ],
-  },
-  {
-    label: "Gestão",
-    items: [
-      { label: "Funcionários", href: "/funcionarios", icon: UserCog, minLevel: 60 },
       { label: "Financeiro", href: "/financeiro", icon: DollarSign, minLevel: 60 },
-      { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "Sistema",
-    items: [
-      { label: "Configurações", href: "/configuracoes", icon: Settings, minLevel: 80 },
     ],
   },
 ];
@@ -112,15 +94,15 @@ export function SidebarContent({ collapsed = false, onNavigate }: SidebarContent
           href="/dashboard"
           onClick={onNavigate}
           className="flex items-center gap-2.5"
-          aria-label="FitPro - ir para o dashboard"
+          aria-label="wenvefit - ir para o dashboard"
         >
-          {/* Marca: halter sobre quadrado volt */}
+          {/* Marca: halter sobre quadrado amarelo (acento da marca) */}
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-volt text-volt-foreground">
             <Dumbbell className="h-4 w-4" />
           </span>
           {!collapsed && (
             <span className="font-display text-lg font-bold tracking-tight">
-              FitPro
+              wenvefit
             </span>
           )}
         </Link>

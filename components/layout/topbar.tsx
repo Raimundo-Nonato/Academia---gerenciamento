@@ -70,11 +70,7 @@ import { UserRole } from "@/types/auth";
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   alunos: "Alunos",
-  funcionarios: "Funcionários",
   financeiro: "Financeiro",
-  agenda: "Agenda",
-  relatorios: "Relatórios",
-  configuracoes: "Configurações",
   perfil: "Meu Perfil",
   novo: "Novo",
   editar: "Editar",

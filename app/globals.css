@@ -1,20 +1,20 @@
 /**
  * ============================================================================
- * ESTILOS GLOBAIS - SISTEMA DE GESTÃO ACADEMIA
+ * ESTILOS GLOBAIS - WENVEFIT (SISTEMA DE GESTÃO)
  * ============================================================================
  *
- * DESIGN SYSTEM "ATHLETIC PROFESSIONAL":
+ * DESIGN SYSTEM "WENVEFIT":
  * - Tipografia: Archivo (títulos, peso forte) + Figtree (texto corrido)
- * - Base: azul-índigo profundo profissional
- * - Acento: "volt" (verde-limão atlético) usado com parcimônia —
+ * - Base: preto/neutro
+ * - Acento: amarelo/dourado da marca — usado com parcimônia:
  *   indicador ativo da sidebar, destaques de gráficos e seleção de texto
- * - Sidebar: azul-grafite escuro com indicador volt
+ * - Sidebar: preta com indicador amarelo
  * - Dark mode completo via classe .dark (next-themes)
  *
  * TOKENS DE COR:
  * - background/foreground: cores principais de fundo e texto
- * - primary: cor de ação principal (azul-índigo)
- * - volt: acento atlético (use --color-volt / classe text-volt etc.)
+ * - primary: cor de ação principal (preto)
+ * - volt: acento amarelo da marca (use --color-volt / classe text-volt etc.)
  * - sidebar-*: cores específicas da sidebar escura
  * - muted/accent: cores secundárias
  */
@@ -26,32 +26,33 @@
 
 :root {
   /* ============ CORES PRINCIPAIS ============ */
-  /* Fundo claro com leve temperatura fria */
-  --background: oklch(0.98 0.003 250);
-  --foreground: oklch(0.17 0.015 260);
+  /* Fundo claro neutro */
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.15 0 0);
 
   /* ============ CARDS E POPOVERS ============ */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.015 260);
+  --card-foreground: oklch(0.15 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.015 260);
+  --popover-foreground: oklch(0.15 0 0);
 
-  /* ============ COR PRIMÁRIA - AZUL-ÍNDIGO ============ */
-  --primary: oklch(0.45 0.17 264);
+  /* ============ COR PRIMÁRIA - PRETO (WENVEFIT) ============ */
+  --primary: oklch(0.18 0 0);
   --primary-foreground: oklch(0.985 0 0);
 
-  /* ============ ACENTO ATLÉTICO - VOLT ============ */
-  /* Verde-limão de alta energia. Usar pontualmente. */
-  --volt: oklch(0.88 0.2 125);
-  --volt-foreground: oklch(0.25 0.06 130);
+  /* ============ ACENTO - AMARELO/DOURADO (WENVEFIT) ============ */
+  /* Amarelo dourado da marca. Usar pontualmente: indicador ativo,
+     destaques de gráficos e seleção de texto. */
+  --volt: oklch(0.82 0.16 86);
+  --volt-foreground: oklch(0.2 0.02 86);
 
   /* ============ CORES SECUNDÁRIAS ============ */
-  --secondary: oklch(0.955 0.005 250);
-  --secondary-foreground: oklch(0.25 0.02 260);
-  --muted: oklch(0.945 0.005 250);
-  --muted-foreground: oklch(0.46 0.015 260);
-  --accent: oklch(0.94 0.01 255);
-  --accent-foreground: oklch(0.25 0.02 260);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.18 0 0);
+  --muted: oklch(0.95 0 0);
+  --muted-foreground: oklch(0.46 0 0);
+  --accent: oklch(0.94 0.01 86);
+  --accent-foreground: oklch(0.18 0 0);
 
   /* ============ FEEDBACK ============ */
   --destructive: oklch(0.577 0.245 27.325);
@@ -60,69 +61,69 @@
   --warning: oklch(0.7 0.15 75);
 
   /* ============ BORDAS E INPUTS ============ */
-  --border: oklch(0.9 0.006 255);
-  --input: oklch(0.89 0.006 255);
-  --ring: oklch(0.45 0.17 264);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.89 0 0);
+  --ring: oklch(0.18 0 0);
 
   /* ============ GRÁFICOS ============ */
-  --chart-1: oklch(0.45 0.17 264); /* azul primário */
-  --chart-2: oklch(0.72 0.17 128); /* volt escurecido p/ fundo claro */
-  --chart-3: oklch(0.6 0.12 200); /* azul-petróleo */
-  --chart-4: oklch(0.55 0.16 290); /* violeta */
-  --chart-5: oklch(0.7 0.15 75); /* âmbar */
+  --chart-1: oklch(0.18 0 0); /* preto primário */
+  --chart-2: oklch(0.82 0.16 86); /* amarelo wenvefit */
+  --chart-3: oklch(0.55 0 0); /* cinza médio */
+  --chart-4: oklch(0.7 0.13 86); /* amarelo escurecido */
+  --chart-5: oklch(0.35 0 0); /* cinza escuro */
 
   /* ============ RADIUS ============ */
   --radius: 0.625rem;
 
-  /* ============ SIDEBAR - AZUL-GRAFITE ESCURO ============ */
-  --sidebar: oklch(0.17 0.018 270);
-  --sidebar-foreground: oklch(0.94 0.005 250);
-  /* Primary na sidebar = volt (indicador ativo) */
-  --sidebar-primary: oklch(0.88 0.2 125);
-  --sidebar-primary-foreground: oklch(0.2 0.05 130);
-  --sidebar-accent: oklch(0.23 0.02 268);
-  --sidebar-accent-foreground: oklch(0.96 0.005 250);
-  --sidebar-border: oklch(0.27 0.02 268);
-  --sidebar-ring: oklch(0.88 0.2 125);
+  /* ============ SIDEBAR - PRETO (WENVEFIT) ============ */
+  --sidebar: oklch(0.1 0 0);
+  --sidebar-foreground: oklch(0.95 0 0);
+  /* Primary na sidebar = amarelo (indicador ativo) */
+  --sidebar-primary: oklch(0.82 0.16 86);
+  --sidebar-primary-foreground: oklch(0.2 0.02 86);
+  --sidebar-accent: oklch(0.18 0 0);
+  --sidebar-accent-foreground: oklch(0.96 0 0);
+  --sidebar-border: oklch(0.22 0 0);
+  --sidebar-ring: oklch(0.82 0.16 86);
 }
 
 .dark {
-  --background: oklch(0.145 0.012 268);
-  --foreground: oklch(0.95 0.005 250);
-  --card: oklch(0.185 0.015 268);
-  --card-foreground: oklch(0.95 0.005 250);
-  --popover: oklch(0.2 0.015 268);
-  --popover-foreground: oklch(0.95 0.005 250);
-  --primary: oklch(0.62 0.16 262);
-  --primary-foreground: oklch(0.13 0.02 268);
-  --volt: oklch(0.88 0.2 125);
-  --volt-foreground: oklch(0.22 0.05 130);
-  --secondary: oklch(0.24 0.015 268);
-  --secondary-foreground: oklch(0.95 0.005 250);
-  --muted: oklch(0.23 0.015 268);
-  --muted-foreground: oklch(0.68 0.012 260);
-  --accent: oklch(0.26 0.018 268);
-  --accent-foreground: oklch(0.95 0.005 250);
+  --background: oklch(0.13 0 0);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.17 0 0);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.18 0 0);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.82 0.16 86);
+  --primary-foreground: oklch(0.16 0.02 86);
+  --volt: oklch(0.82 0.16 86);
+  --volt-foreground: oklch(0.18 0.02 86);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.22 0 0);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.25 0 0);
+  --accent-foreground: oklch(0.96 0 0);
   --destructive: oklch(0.62 0.21 25);
   --destructive-foreground: oklch(0.98 0 0);
   --success: oklch(0.7 0.14 160);
   --warning: oklch(0.78 0.14 80);
-  --border: oklch(0.28 0.018 268);
-  --input: oklch(0.3 0.018 268);
-  --ring: oklch(0.62 0.16 262);
-  --chart-1: oklch(0.62 0.16 262);
-  --chart-2: oklch(0.85 0.19 128);
-  --chart-3: oklch(0.7 0.12 200);
-  --chart-4: oklch(0.65 0.16 290);
-  --chart-5: oklch(0.78 0.14 80);
-  --sidebar: oklch(0.125 0.012 268);
-  --sidebar-foreground: oklch(0.94 0.005 250);
-  --sidebar-primary: oklch(0.88 0.2 125);
-  --sidebar-primary-foreground: oklch(0.2 0.05 130);
-  --sidebar-accent: oklch(0.2 0.015 268);
-  --sidebar-accent-foreground: oklch(0.96 0.005 250);
-  --sidebar-border: oklch(0.24 0.015 268);
-  --sidebar-ring: oklch(0.88 0.2 125);
+  --border: oklch(0.27 0 0);
+  --input: oklch(0.28 0 0);
+  --ring: oklch(0.82 0.16 86);
+  --chart-1: oklch(0.82 0.16 86);
+  --chart-2: oklch(0.7 0 0);
+  --chart-3: oklch(0.5 0 0);
+  --chart-4: oklch(0.6 0.13 86);
+  --chart-5: oklch(0.4 0 0);
+  --sidebar: oklch(0.08 0 0);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.82 0.16 86);
+  --sidebar-primary-foreground: oklch(0.16 0.02 86);
+  --sidebar-accent: oklch(0.17 0 0);
+  --sidebar-accent-foreground: oklch(0.96 0 0);
+  --sidebar-border: oklch(0.2 0 0);
+  --sidebar-ring: oklch(0.82 0.16 86);
 }
 
 @theme inline {
@@ -184,10 +185,10 @@
 
   body {
     @apply bg-background text-foreground;
-    /* Atmosfera sutil: halo do azul primário no topo da área de conteúdo */
+    /* Atmosfera sutil: halo amarelo no topo da área de conteúdo */
     background-image: radial-gradient(
       1100px 500px at 75% -5%,
-      oklch(0.45 0.17 264 / 0.05),
+      oklch(0.82 0.16 86 / 0.07),
       transparent 60%
     );
     background-repeat: no-repeat;
@@ -196,7 +197,7 @@
   .dark body {
     background-image: radial-gradient(
       1100px 500px at 75% -5%,
-      oklch(0.62 0.16 262 / 0.09),
+      oklch(0.82 0.16 86 / 0.06),
       transparent 60%
     );
   }

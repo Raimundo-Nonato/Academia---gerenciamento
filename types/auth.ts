@@ -63,8 +63,20 @@ export interface AuthContextType {
   user: User | null;
   /** Indica se está carregando dados de autenticação */
   isLoading: boolean;
+  /** Indica se há uma sessão ativa */
+  isAuthenticated: boolean;
+  /**
+   * Realiza login com usuário/senha (validação local, apenas para testes).
+   * @returns true se as credenciais forem válidas
+   */
+  login: (username: string, password: string) => boolean;
   /** Função para logout */
   logout: () => void;
+  /**
+   * Altera a senha da conta de teste (válida apenas durante a sessão).
+   * @returns true se a senha atual informada estiver correta
+   */
+  changePassword: (currentPassword: string, newPassword: string) => boolean;
   /**
    * Troca o role do usuário logado.
    * APENAS PARA DEMONSTRAÇÃO enquanto não há backend — permite testar

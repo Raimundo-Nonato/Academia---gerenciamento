@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Archivo, Figtree } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/contexts/auth-context";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 /**
@@ -45,12 +47,12 @@ const figtree = Figtree({
  */
 export const metadata: Metadata = {
   title: {
-    default: "FitPro - Sistema de Gestão",
-    template: "%s | FitPro",
+    default: "wenvefit - Sistema de Gestão",
+    template: "%s | wenvefit",
   },
   description: "Sistema de gestão interna para academia de musculação",
-  keywords: ["academia", "gestão", "musculação", "fitness"],
-  authors: [{ name: "FitPro Academia" }],
+  keywords: ["academia", "gestão", "musculação", "fitness", "wenvefit"],
+  authors: [{ name: "wenvefit" }],
   robots: {
     index: false, // Sistema interno - não indexar
     follow: false,
@@ -67,7 +69,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#14161f" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0d0d" },
   ],
 };
 
@@ -91,7 +93,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <AuthProvider>
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+          </AuthProvider>
           <Toaster position="bottom-right" richColors closeButton />
         </ThemeProvider>
       </body>

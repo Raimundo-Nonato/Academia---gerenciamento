@@ -21,6 +21,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,12 +40,20 @@ import { ROLE_BADGE_COLORS, ROLE_LEVELS } from "@/types/auth";
 import { cn, getInitials } from "@/lib/utils";
 
 export default function PerfilPage() {
-  const { user } = useAuth();
+  const { user, changePassword } = useAuth();
 
   // Formulário controlado (inicializado com os dados do usuário)
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  // ============ TROCA DE SENHA ============
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -58,6 +75,52 @@ export default function PerfilPage() {
     await new Promise((r) => setTimeout(r, 700)); // Simula API
     setSalvando(false);
     toast.success("Perfil atualizado com sucesso!");
+  };
+
+  const resetPasswordForm = () => {
+    setSenhaAtual("");
+    setNovaSenha("");
+    setConfirmarSenha("");
+    setPasswordError("");
+  };
+
+  /**
+   * Valida e aplica a troca de senha (local, válida durante a sessão).
+   */
+  const handlePasswordChange = async () => {
+    setPasswordError("");
+
+    if (!senhaAtual || !novaSenha || !confirmarSenha) {
+      setPasswordError("Preencha todos os campos.");
+      return;
+    }
+
+    if (novaSenha.length < 3) {
+      setPasswordError("A nova senha deve ter pelo menos 3 caracteres.");
+      return;
+    }
+
+    if (novaSenha !== confirmarSenha) {
+      setPasswordError("A confirmação não corresponde à nova senha.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    await new Promise((r) => setTimeout(r, 400)); // Simula API
+
+    const success = changePassword(senhaAtual, novaSenha);
+    setIsChangingPassword(false);
+
+    if (!success) {
+      setPasswordError("Senha atual incorreta.");
+      return;
+    }
+
+    toast.success("Senha alterada com sucesso!", {
+      description: "A nova senha é válida durante esta sessão.",
+    });
+    resetPasswordForm();
+    setIsPasswordDialogOpen(false);
   };
 
   return (
@@ -135,18 +198,88 @@ export default function PerfilPage() {
               <p className="mb-3 text-sm text-muted-foreground">
                 Recomendamos trocar sua senha periodicamente.
               </p>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  // TODO: Implementar fluxo real de troca de senha
-                  toast.info("Troca de senha disponível em breve", {
-                    description: "Funcionalidade aguardando integração com o backend.",
-                  })
-                }
+              <Dialog
+                open={isPasswordDialogOpen}
+                onOpenChange={(open) => {
+                  setIsPasswordDialogOpen(open);
+                  if (!open) resetPasswordForm();
+                }}
               >
-                <KeyRound className="mr-2 h-4 w-4" />
-                Alterar senha
-              </Button>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    Alterar senha
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Alterar senha</DialogTitle>
+                    <DialogDescription>
+                      Informe sua senha atual e defina uma nova senha. A
+                      alteração é válida durante esta sessão.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="senha-atual">Senha atual</Label>
+                      <Input
+                        id="senha-atual"
+                        type="password"
+                        autoComplete="current-password"
+                        value={senhaAtual}
+                        onChange={(e) => setSenhaAtual(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nova-senha">Nova senha</Label>
+                      <Input
+                        id="nova-senha"
+                        type="password"
+                        autoComplete="new-password"
+                        value={novaSenha}
+                        onChange={(e) => setNovaSenha(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmar-senha">
+                        Confirmar nova senha
+                      </Label>
+                      <Input
+                        id="confirmar-senha"
+                        type="password"
+                        autoComplete="new-password"
+                        value={confirmarSenha}
+                        onChange={(e) => setConfirmarSenha(e.target.value)}
+                      />
+                    </div>
+
+                    {passwordError && (
+                      <p
+                        className="text-sm font-medium text-destructive"
+                        role="alert"
+                      >
+                        {passwordError}
+                      </p>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setIsPasswordDialogOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handlePasswordChange}
+                      disabled={isChangingPassword}
+                    >
+                      {isChangingPassword ? "Salvando..." : "Salvar nova senha"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </CardContent>
         </Card>

@@ -16,8 +16,6 @@
  */
 export const ROUTE_MIN_LEVEL: Record<string, number> = {
   "/financeiro": 60, // Gerente+
-  "/funcionarios": 60, // Gerente+
-  "/configuracoes": 80, // Admin
 };
 
 /**

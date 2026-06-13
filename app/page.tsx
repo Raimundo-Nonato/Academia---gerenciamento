@@ -1,18 +1,29 @@
+"use client";
+
 /**
  * ============================================================================
  * PÁGINA RAIZ - REDIRECIONAMENTO
  * ============================================================================
- * 
- * Redireciona automaticamente para o dashboard.
- * 
- * TIP: Em produção, redirecionar para /login se não autenticado.
- * TODO: Implementar verificação de autenticação
+ *
+ * Redireciona para /dashboard se autenticado, ou /login caso contrário.
  */
 
-import { redirect } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function HomePage() {
-  // TODO: Verificar se usuário está autenticado
-  // Se não, redirecionar para /login
-  redirect("/dashboard");
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace(isAuthenticated ? "/dashboard" : "/login");
+  }, [isAuthenticated, router]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Spinner className="h-6 w-6" />
+    </div>
+  );
 }
