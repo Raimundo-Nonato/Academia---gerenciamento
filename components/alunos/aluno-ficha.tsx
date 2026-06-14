@@ -31,7 +31,6 @@ import {
   MapPin,
   Calendar,
   CreditCard,
-  Dumbbell,
   Eye,
   EyeOff,
   AlertTriangle,
@@ -67,9 +66,9 @@ import {
   Aluno,
   AlunoDetalhes,
   Pagamento,
-  FichaTreino,
   STATUS_ALUNO_CONFIG,
 } from "@/types/aluno";
+import { FichaTreinoTab } from "@/components/alunos/ficha-treino-tab";
 
 /**
  * Props do componente de ficha.
@@ -127,12 +126,6 @@ const MOCK_PAGAMENTOS: Pagamento[] = [
   { id: "pg3", alunoId: "1", data: "2023-11-15", valor: 150, status: "pago", metodoPagamento: "pix" },
   { id: "pg4", alunoId: "1", data: "2023-10-15", valor: 150, status: "pago", metodoPagamento: "boleto" },
   { id: "pg5", alunoId: "1", data: "2023-09-15", valor: 150, status: "estornado", metodoPagamento: "cartao_credito" },
-];
-
-const MOCK_FICHAS: FichaTreino[] = [
-  { id: "f1", nome: "Treino A - Superior", descricao: "Peito, Ombro e Tríceps", ativa: true, criadaEm: "2024-01-01", atualizadaEm: "2024-01-20", personalNome: "Carlos Trainer" },
-  { id: "f2", nome: "Treino B - Inferior", descricao: "Pernas e Glúteos", ativa: true, criadaEm: "2024-01-01", atualizadaEm: "2024-01-15", personalNome: "Carlos Trainer" },
-  { id: "f3", nome: "Treino C - Costas", descricao: "Costas e Bíceps", ativa: false, criadaEm: "2023-10-01", atualizadaEm: "2023-12-01", personalNome: "Ana Personal" },
 ];
 
 /**
@@ -209,7 +202,6 @@ export function AlunoFicha({ aluno, open, onOpenChange, onRegistrarPagamento }: 
   // TODO: Buscar detalhes completos via API quando aluno mudar
   const detalhes = MOCK_DETALHES;
   const pagamentos = MOCK_PAGAMENTOS;
-  const fichas = MOCK_FICHAS;
 
   // Verifica se usuário é admin para ver CPF completo
   const isAdmin = user?.role === UserRole.ADMIN;
@@ -449,73 +441,8 @@ export function AlunoFicha({ aluno, open, onOpenChange, onRegistrarPagamento }: 
           </TabsContent>
 
           {/* ============ ABA: TREINOS ============ */}
-          <TabsContent value="treinos" className="space-y-6 mt-6">
-            {/* Personal responsável */}
-            {aluno.personalNome && (
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                    {getInitials(aluno.personalNome)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">Personal Trainer</p>
-                  <p className="text-sm text-muted-foreground">{aluno.personalNome}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Fichas de treino */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">
-                Fichas de Treino
-              </h3>
-              <div className="grid gap-3">
-                {fichas.map((ficha) => (
-                  <Card
-                    key={ficha.id}
-                    className={ficha.ativa ? "" : "opacity-60"}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-primary/10 rounded-md">
-                            <Dumbbell className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{ficha.nome}</p>
-                              {ficha.ativa ? (
-                                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
-                                  Ativa
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">Inativa</Badge>
-                              )}
-                            </div>
-                            {ficha.descricao && (
-                              <p className="text-sm text-muted-foreground mt-0.5">
-                                {ficha.descricao}
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Atualizada em {formatDate(ficha.atualizadaEm)}
-                              {ficha.personalNome && ` • ${ficha.personalNome}`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* Último check-in */}
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Último check-in</p>
-              <p className="font-medium">Hoje às 07:45</p>
-            </div>
+          <TabsContent value="treinos" className="mt-6">
+            <FichaTreinoTab aluno={aluno} />
           </TabsContent>
         </Tabs>
       </SheetContent>
