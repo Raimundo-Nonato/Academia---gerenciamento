@@ -29,7 +29,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Dumbbell,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -96,9 +95,13 @@ export function SidebarContent({ collapsed = false, onNavigate }: SidebarContent
           className="flex items-center gap-2.5"
           aria-label="wenvefit - ir para o dashboard"
         >
-          {/* Marca: halter sobre quadrado amarelo (acento da marca) */}
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-volt text-volt-foreground">
-            <Dumbbell className="h-4 w-4" />
+          {/* Marca: logo wenvefit */}
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+            <img
+              src="/wenvefit-mark.png"
+              alt="wenvefit"
+              className="h-full w-full object-cover"
+            />
           </span>
           {!collapsed && (
             <span className="font-display text-lg font-bold tracking-tight">

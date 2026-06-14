@@ -81,6 +81,11 @@ interface AlunoFichaProps {
   open: boolean;
   /** Callback para fechar */
   onOpenChange: (open: boolean) => void;
+  /**
+   * Callback para registrar pagamento do aluno.
+   * Atualiza proximoVencimento (+1 mês) e status (=> "ativo") automaticamente.
+   */
+  onRegistrarPagamento?: (aluno: Aluno) => void;
 }
 
 // ============ DADOS MOCK ============
@@ -195,7 +200,7 @@ function getMetodoPagamentoLabel(metodo: Pagamento["metodoPagamento"]): string {
   return labels[metodo];
 }
 
-export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
+export function AlunoFicha({ aluno, open, onOpenChange, onRegistrarPagamento }: AlunoFichaProps) {
   const { user } = useAuth();
   const [showCPF, setShowCPF] = useState(false);
   const canAccessFinance = useHasPermission(60);
@@ -384,6 +389,23 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
                   <p className="font-medium">{formatDate(aluno.proximoVencimento)}</p>
                 </div>
               </CardContent>
+              {onRegistrarPagamento &&
+                (aluno.status === "ativo" || aluno.status === "inadimplente") && (
+                  <CardContent className="pt-0">
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => onRegistrarPagamento(aluno)}
+                    >
+                      <CheckCircle className="mr-1.5 h-4 w-4" />
+                      Registrar Pagamento
+                    </Button>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Renova o vencimento por 1 mês e atualiza o status para
+                      Ativo automaticamente.
+                    </p>
+                  </CardContent>
+                )}
             </Card>
 
             {/* Histórico de pagamentos */}

@@ -40,6 +40,8 @@ import {
   FiltrosAluno,
   NovoAlunoData,
   MENSALIDADE_PADRAO,
+  recalcularStatusAlunos,
+  registrarPagamentoAluno,
 } from "@/types/aluno";
 
 // ============ DADOS MOCK ============
@@ -237,7 +239,11 @@ export default function AlunosPage() {
   // ============ ESTADOS ============
 
   // Lista de alunos (estado local enquanto não há API)
-  const [alunos, setAlunos] = useState<Aluno[]>(MOCK_ALUNOS);
+  // Status "ativo"/"inadimplente" é recalculado automaticamente com base
+  // em proximoVencimento (regra: >30 dias de atraso => inadimplente).
+  const [alunos, setAlunos] = useState<Aluno[]>(() =>
+    recalcularStatusAlunos(MOCK_ALUNOS)
+  );
 
   // Estado de loading/erro (simula chamada à API)
   const [isLoading, setIsLoading] = useState(false);
@@ -346,6 +352,23 @@ export default function AlunosPage() {
     );
     toast.success(`${aluno.nome} foi suspenso(a)`, {
       description: "O acesso à academia ficará bloqueado até a reativação.",
+    });
+  }, []);
+
+  /**
+   * Registra o pagamento do aluno: avança o próximo vencimento em 1 mês
+   * e atualiza o status automaticamente para "ativo".
+   * TODO: Chamar API para persistir o pagamento.
+   */
+  const handleRegistrarPagamento = useCallback((aluno: Aluno) => {
+    setAlunos((prev) =>
+      prev.map((a) => (a.id === aluno.id ? registrarPagamentoAluno(a) : a))
+    );
+    setAlunoSelecionado((prev) =>
+      prev && prev.id === aluno.id ? registrarPagamentoAluno(prev) : prev
+    );
+    toast.success(`Pagamento registrado para ${aluno.nome}`, {
+      description: "Status atualizado para Ativo e vencimento renovado por 1 mês.",
     });
   }, []);
 
@@ -522,6 +545,7 @@ export default function AlunosPage() {
         aluno={alunoSelecionado}
         open={fichaAberta}
         onOpenChange={setFichaAberta}
+        onRegistrarPagamento={handleRegistrarPagamento}
       />
 
       {/* ============ MODAL NOVO ALUNO ============ */}

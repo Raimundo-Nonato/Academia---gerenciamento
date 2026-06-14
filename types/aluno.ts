@@ -208,3 +208,96 @@ export interface NovoAlunoPlano {
  * Interface completa para criação de aluno.
  */
 export interface NovoAlunoData extends NovoAlunoDadosBasicos, NovoAlunoPlano {}
+
+/**
+ * ============================================================================
+ * REGRA AUTOMÁTICA DE STATUS (ATIVO <-> INADIMPLENTE)
+ * ============================================================================
+ *
+ * Regra:
+ * - Se (hoje - proximoVencimento) > 30 dias  => status = "inadimplente"
+ * - Quando um novo pagamento é registrado (proximoVencimento é atualizado
+ *   para uma data futura), o status volta automaticamente para "ativo"
+ *
+ * IMPORTANTE: a regra automática só transita entre "ativo" e "inadimplente".
+ * Status definidos manualmente ("suspenso" e "cancelado") são preservados,
+ * pois representam decisões administrativas e não devem ser sobrescritos
+ * pela regra de inadimplência.
+ */
+
+/** Quantidade de dias de atraso a partir da qual o aluno é considerado inadimplente. */
+export const DIAS_LIMITE_INADIMPLENCIA = 30;
+
+/**
+ * Calcula o status automático de um aluno com base na data de
+ * próximo vencimento, preservando status administrativos manuais
+ * ("suspenso" e "cancelado").
+ *
+ * @param aluno Aluno (ou dados parciais) com `status` e `proximoVencimento`.
+ * @param referencia Data de referência para o cálculo (padrão: agora).
+ * @returns O status recalculado do aluno.
+ */
+export function calcularStatusAluno(
+  aluno: Pick<Aluno, "status" | "proximoVencimento">,
+  referencia: Date = new Date()
+): StatusAluno {
+  // Status administrativos manuais não são alterados pela regra automática.
+  if (aluno.status === "suspenso" || aluno.status === "cancelado") {
+    return aluno.status;
+  }
+
+  const vencimento = new Date(`${aluno.proximoVencimento}T00:00:00`);
+  const diffDias = Math.floor(
+    (referencia.getTime() - vencimento.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return diffDias > DIAS_LIMITE_INADIMPLENCIA ? "inadimplente" : "ativo";
+}
+
+/**
+ * Aplica `calcularStatusAluno` a uma lista de alunos, retornando uma nova
+ * lista com os status atualizados automaticamente.
+ *
+ * Use ao carregar/recarregar a lista de alunos para garantir que o status
+ * reflita a regra de inadimplência sem intervenção manual.
+ *
+ * @param alunos Lista de alunos a recalcular.
+ * @param referencia Data de referência para o cálculo (padrão: agora).
+ */
+export function recalcularStatusAlunos<T extends Pick<Aluno, "status" | "proximoVencimento">>(
+  alunos: T[],
+  referencia: Date = new Date()
+): T[] {
+  return alunos.map((aluno) => {
+    const novoStatus = calcularStatusAluno(aluno, referencia);
+    return novoStatus === aluno.status ? aluno : { ...aluno, status: novoStatus };
+  });
+}
+
+/**
+ * Registra um pagamento para o aluno: avança o próximo vencimento em 1 mês
+ * a partir de hoje e marca o status como "ativo" automaticamente.
+ *
+ * Não altera alunos com status "suspenso" ou "cancelado" — nesses casos,
+ * a reativação deve ser feita manualmente antes do registro do pagamento.
+ *
+ * @param aluno Aluno que recebeu o pagamento.
+ * @param dataPagamento Data em que o pagamento foi registrado (padrão: hoje).
+ */
+export function registrarPagamentoAluno<T extends Pick<Aluno, "status" | "proximoVencimento">>(
+  aluno: T,
+  dataPagamento: Date = new Date()
+): T {
+  if (aluno.status === "suspenso" || aluno.status === "cancelado") {
+    return aluno;
+  }
+
+  const novoVencimento = new Date(dataPagamento);
+  novoVencimento.setMonth(novoVencimento.getMonth() + 1);
+
+  return {
+    ...aluno,
+    proximoVencimento: novoVencimento.toISOString().slice(0, 10),
+    status: "ativo",
+  };
+}
