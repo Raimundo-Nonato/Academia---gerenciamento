@@ -104,6 +104,59 @@ export interface Pagamento {
 }
 
 /**
+ * Categorias musculares padrão disponíveis na ficha de treino.
+ */
+export type CategoriaMuscullar =
+  | "Peito"
+  | "Costas"
+  | "Ombro"
+  | "Bíceps"
+  | "Tríceps"
+  | "Perna"
+  | "Abdômen"
+  | "Cardio";
+
+/**
+ * Lista das categorias musculares padrão na ordem de exibição.
+ */
+export const CATEGORIAS_MUSCULARES: CategoriaMuscullar[] = [
+  "Peito",
+  "Costas",
+  "Ombro",
+  "Bíceps",
+  "Tríceps",
+  "Perna",
+  "Abdômen",
+  "Cardio",
+];
+
+/**
+ * Exercício individual dentro de uma categoria muscular.
+ */
+export interface Exercicio {
+  /** UUID único do exercício */
+  id: string;
+  /** Nome do exercício */
+  nome: string;
+  /** Quantidade de séries */
+  series: number;
+  /** Quantidade de repetições (ex: "10-12" ou "15") */
+  repeticoes: string;
+  /** Observações opcionais */
+  observacoes?: string;
+}
+
+/**
+ * Grupo de exercícios por categoria muscular.
+ */
+export interface CategoriaExercicio {
+  /** Nome da categoria muscular */
+  categoria: CategoriaMuscullar;
+  /** Lista de exercícios desta categoria */
+  exercicios: Exercicio[];
+}
+
+/**
  * Ficha de treino do aluno.
  */
 export interface FichaTreino {
@@ -115,6 +168,8 @@ export interface FichaTreino {
   atualizadaEm: string;
   personalId?: string;
   personalNome?: string;
+  /** Categorias com exercícios - estrutura completa da ficha */
+  categorias?: CategoriaExercicio[];
 }
 
 /**
@@ -207,10 +262,7 @@ export interface NovoAlunoPlano {
 /**
  * Interface completa para criação de aluno.
  */
-export interface NovoAlunoData extends NovoAlunoDadosBasicos, NovoAlunoPlano {
-  /** Ficha de treino inicial (opcional - pode ser criada depois no perfil do aluno) */
-  fichaTreino?: CategoriaExercicio[];
-}
+export interface NovoAlunoData extends NovoAlunoDadosBasicos, NovoAlunoPlano {}
 
 /**
  * ============================================================================

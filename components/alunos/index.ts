@@ -14,3 +14,4 @@ export { AlunosTabela } from "./alunos-tabela";
 export { AlunosPaginacao } from "./alunos-paginacao";
 export { AlunoFicha } from "./aluno-ficha";
 export { NovoAlunoModal } from "./novo-aluno-modal";
+export { FichaTreinoTab } from "./ficha-treino-tab";
