@@ -3,19 +3,15 @@
  * COMPONENTE: MODAL DE CADASTRO DE ALUNO (Wizard)
  * ============================================================================
  *
- * Formulário de cadastro em 3 passos:
- * 1. Dados Básicos - Nome, email, data de nascimento
- * 2. Pagamento - Forma de pagamento (PIX/Dinheiro), data início, personal
- * 3. Confirmação - Revisão dos dados antes de salvar
- *
- * MENSALIDADE PADRÃO:
- * - 1º mês: R$ 50,00
- * - A partir do 2º mês: R$ 65,00/mês
+ * Formulário de cadastro em 2 passos:
+ * 1. Dados Básicos - Nome, email, data de nascimento, telefone, CPF,
+ *                    data de início, personal, observações médicas
+ * 2. Confirmação - Revisão dos dados antes de salvar
  *
  * VALIDAÇÃO:
- * - Zod schema em cada passo
+ * - Zod schema no passo 1
  * - Não avança sem validar
- * - Botão "Salvar" desabilitado até passo final
+ * - Botão "Salvar" disponível apenas no passo final
  */
 
 "use client";
@@ -29,8 +25,6 @@ import {
   ArrowRight,
   Check,
   User,
-  Banknote,
-  QrCode,
   ClipboardCheck,
   Loader2,
 } from "lucide-react";
@@ -53,13 +47,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { MetodoPagamentoCadastro, NovoAlunoData, MENSALIDADE_PADRAO } from "@/types/aluno";
+import { NovoAlunoData } from "@/types/aluno";
 
-// ============ SCHEMAS DE VALIDAÇÃO (Zod) ============
+// ============ SCHEMA DE VALIDAÇÃO (Zod) ============
 
 /**
  * Schema do Passo 1 - Dados Básicos.
- * Campos obrigatórios: nome, email, data de nascimento.
  */
 const dadosBasicosSchema = z.object({
   nome: z
@@ -78,22 +71,12 @@ const dadosBasicosSchema = z.object({
     .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato: 000.000.000-00")
     .optional()
     .or(z.literal("")),
-});
-
-/**
- * Schema do Passo 2 - Pagamento.
- */
-const planoSchema = z.object({
   dataInicio: z.string().min(1, "Data de início obrigatória"),
-  metodoPagamento: z.enum(["pix", "dinheiro"], {
-    required_error: "Selecione a forma de pagamento",
-  }),
   personalId: z.string().optional(),
   observacoesMedicas: z.string().optional(),
 });
 
 type DadosBasicosForm = z.infer<typeof dadosBasicosSchema>;
-type PlanoForm = z.infer<typeof planoSchema>;
 
 /**
  * Props do componente.
@@ -114,8 +97,7 @@ interface NovoAlunoModalProps {
  */
 const PASSOS = [
   { numero: 1, titulo: "Dados Básicos", icon: User },
-  { numero: 2, titulo: "Pagamento", icon: Banknote },
-  { numero: 3, titulo: "Confirmação", icon: ClipboardCheck },
+  { numero: 2, titulo: "Confirmação", icon: ClipboardCheck },
 ];
 
 export function NovoAlunoModal({
@@ -124,16 +106,11 @@ export function NovoAlunoModal({
   onSave,
   personais,
 }: NovoAlunoModalProps) {
-  // Estado do wizard
   const [passoAtual, setPassoAtual] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-  // Estado para armazenar dados entre passos
   const [dadosBasicos, setDadosBasicos] = useState<DadosBasicosForm | null>(null);
-  const [dadosPlano, setDadosPlano] = useState<PlanoForm | null>(null);
 
-  // Form do Passo 1
   const formPasso1 = useForm<DadosBasicosForm>({
     resolver: zodResolver(dadosBasicosSchema),
     defaultValues: dadosBasicos || {
@@ -142,22 +119,14 @@ export function NovoAlunoModal({
       dataNascimento: "",
       telefone: "",
       cpf: "",
-    },
-  });
-
-  // Form do Passo 2
-  const formPasso2 = useForm<PlanoForm>({
-    resolver: zodResolver(planoSchema),
-    defaultValues: dadosPlano || {
       dataInicio: new Date().toISOString().split("T")[0],
-      metodoPagamento: undefined,
       personalId: "",
       observacoesMedicas: "",
     },
   });
 
   /**
-   * Avança para próximo passo após validar.
+   * Avança para a confirmação após validar.
    */
   const avancarPasso = async () => {
     if (passoAtual === 1) {
@@ -166,12 +135,6 @@ export function NovoAlunoModal({
         setDadosBasicos(formPasso1.getValues());
         setPassoAtual(2);
       }
-    } else if (passoAtual === 2) {
-      const isValid = await formPasso2.trigger();
-      if (isValid) {
-        setDadosPlano(formPasso2.getValues());
-        setPassoAtual(3);
-      }
     }
   };
 
@@ -179,16 +142,14 @@ export function NovoAlunoModal({
    * Volta para passo anterior.
    */
   const voltarPasso = () => {
-    if (passoAtual > 1) {
-      setPassoAtual(passoAtual - 1);
-    }
+    if (passoAtual > 1) setPassoAtual(passoAtual - 1);
   };
 
   /**
    * Submete o formulário completo.
    */
   const handleSubmit = async () => {
-    if (!dadosBasicos || !dadosPlano) return;
+    if (!dadosBasicos) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -196,10 +157,10 @@ export function NovoAlunoModal({
     try {
       await onSave({
         ...dadosBasicos,
-        ...dadosPlano,
+        // metodoPagamento é exigido pelo tipo NovoAlunoData; usa valor neutro
+        // pois o campo foi removido do fluxo de cadastro.
+        metodoPagamento: "dinheiro",
       });
-
-      // Reseta e fecha
       resetForm();
       onOpenChange(false);
     } catch {
@@ -215,19 +176,12 @@ export function NovoAlunoModal({
   const resetForm = () => {
     setPassoAtual(1);
     setDadosBasicos(null);
-    setDadosPlano(null);
     formPasso1.reset();
-    formPasso2.reset();
     setSubmitError(null);
   };
 
-  /**
-   * Fecha modal e reseta.
-   */
   const handleClose = (isOpen: boolean) => {
-    if (!isOpen) {
-      resetForm();
-    }
+    if (!isOpen) resetForm();
     onOpenChange(isOpen);
   };
 
@@ -250,7 +204,6 @@ export function NovoAlunoModal({
 
             return (
               <div key={passo.numero} className="flex items-center">
-                {/* Conector */}
                 {index > 0 && (
                   <div
                     className={`w-12 h-0.5 mx-2 ${
@@ -258,8 +211,6 @@ export function NovoAlunoModal({
                     }`}
                   />
                 )}
-
-                {/* Círculo do passo */}
                 <div
                   className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors ${
                     isActive
@@ -280,9 +231,8 @@ export function NovoAlunoModal({
           })}
         </div>
 
-        {/* Título do passo atual */}
         <p className="text-center text-sm text-muted-foreground mb-4">
-          Passo {passoAtual} de 3: {PASSOS[passoAtual - 1].titulo}
+          Passo {passoAtual} de 2: {PASSOS[passoAtual - 1].titulo}
         </p>
 
         <Separator />
@@ -361,70 +311,17 @@ export function NovoAlunoModal({
                   </p>
                 )}
               </div>
-            </div>
-          </form>
-        )}
-
-        {/* ============ PASSO 2: PAGAMENTO ============ */}
-        {passoAtual === 2 && (
-          <form className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Mensalidade informativa */}
-              <div className="col-span-2 rounded-lg bg-muted/50 p-3 text-sm">
-                <p className="font-medium mb-1">Mensalidade padrão</p>
-                <p className="text-muted-foreground">
-                  1º mês: <span className="font-medium text-foreground">R$ {MENSALIDADE_PADRAO.primeiroMes.toFixed(2).replace(".", ",")}</span>
-                  {" · "}
-                  A partir do 2º mês: <span className="font-medium text-foreground">R$ {MENSALIDADE_PADRAO.mensalRecorrente.toFixed(2).replace(".", ",")}/mês</span>
-                </p>
-              </div>
-
-              {/* Seleção de forma de pagamento */}
-              <div className="col-span-2 space-y-2">
-                <Label>Forma de pagamento da mensalidade *</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(["pix", "dinheiro"] as const).map((metodo) => {
-                    const isSelected = formPasso2.watch("metodoPagamento") === metodo;
-                    const Icon = metodo === "pix" ? QrCode : Banknote;
-                    const label = metodo === "pix" ? "PIX" : "Dinheiro";
-                    return (
-                      <button
-                        key={metodo}
-                        type="button"
-                        onClick={() =>
-                          formPasso2.setValue("metodoPagamento", metodo, {
-                            shouldValidate: true,
-                          })
-                        }
-                        className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition-colors cursor-pointer ${
-                          isSelected
-                            ? "border-primary bg-primary/5 text-primary"
-                            : "border-muted hover:border-muted-foreground/50"
-                        }`}
-                      >
-                        <Icon className="h-6 w-6" />
-                        <span className="font-medium text-sm">{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {formPasso2.formState.errors.metodoPagamento && (
-                  <p className="text-sm text-destructive mt-1">
-                    {formPasso2.formState.errors.metodoPagamento.message}
-                  </p>
-                )}
-              </div>
 
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="dataInicio">Data de início *</Label>
                 <Input
                   id="dataInicio"
                   type="date"
-                  {...formPasso2.register("dataInicio")}
+                  {...formPasso1.register("dataInicio")}
                 />
-                {formPasso2.formState.errors.dataInicio && (
+                {formPasso1.formState.errors.dataInicio && (
                   <p className="text-sm text-destructive mt-1">
-                    {formPasso2.formState.errors.dataInicio.message}
+                    {formPasso1.formState.errors.dataInicio.message}
                   </p>
                 )}
               </div>
@@ -432,9 +329,9 @@ export function NovoAlunoModal({
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="personalId">Personal Trainer (opcional)</Label>
                 <Select
-                  value={formPasso2.watch("personalId") || "sem_personal"}
+                  value={formPasso1.watch("personalId") || "sem_personal"}
                   onValueChange={(v) =>
-                    formPasso2.setValue("personalId", v === "sem_personal" ? "" : v)
+                    formPasso1.setValue("personalId", v === "sem_personal" ? "" : v)
                   }
                 >
                   <SelectTrigger>
@@ -457,7 +354,7 @@ export function NovoAlunoModal({
                 </Label>
                 <Textarea
                   id="observacoesMedicas"
-                  {...formPasso2.register("observacoesMedicas")}
+                  {...formPasso1.register("observacoesMedicas")}
                   placeholder="Informe restrições médicas, lesões, alergias, etc."
                   rows={3}
                 />
@@ -469,8 +366,8 @@ export function NovoAlunoModal({
           </form>
         )}
 
-        {/* ============ PASSO 3: CONFIRMAÇÃO ============ */}
-        {passoAtual === 3 && dadosBasicos && dadosPlano && (
+        {/* ============ PASSO 2: CONFIRMAÇÃO ============ */}
+        {passoAtual === 2 && dadosBasicos && (
           <div className="space-y-4 py-4">
             <div className="rounded-lg border p-4 space-y-4">
               <div>
@@ -506,31 +403,17 @@ export function NovoAlunoModal({
               <Separator />
 
               <div>
-                <h4 className="font-medium mb-2">Pagamento & Início</h4>
+                <h4 className="font-medium mb-2">Matrícula</h4>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <dt className="text-muted-foreground">Forma de pagamento</dt>
-                    <dd className="font-medium">
-                      {dadosPlano.metodoPagamento === "pix" ? "PIX" : "Dinheiro"}
-                    </dd>
-                  </div>
-                  <div>
                     <dt className="text-muted-foreground">Início</dt>
-                    <dd>{dadosPlano.dataInicio}</dd>
+                    <dd>{dadosBasicos.dataInicio}</dd>
                   </div>
-                  <div>
-                    <dt className="text-muted-foreground">1º mês</dt>
-                    <dd className="font-medium text-green-600">R$ 50,00</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">A partir do 2º mês</dt>
-                    <dd className="font-medium">R$ 65,00/mês</dd>
-                  </div>
-                  {dadosPlano.personalId && (
+                  {dadosBasicos.personalId && (
                     <div className="col-span-2">
                       <dt className="text-muted-foreground">Personal</dt>
                       <dd>
-                        {personais.find((p) => p.id === dadosPlano.personalId)?.nome ||
+                        {personais.find((p) => p.id === dadosBasicos.personalId)?.nome ||
                           "Não encontrado"}
                       </dd>
                     </div>
@@ -538,20 +421,19 @@ export function NovoAlunoModal({
                 </dl>
               </div>
 
-              {dadosPlano.observacoesMedicas && (
+              {dadosBasicos.observacoesMedicas && (
                 <>
                   <Separator />
                   <div>
                     <h4 className="font-medium mb-2">Observações Médicas</h4>
                     <p className="text-sm text-muted-foreground">
-                      {dadosPlano.observacoesMedicas}
+                      {dadosBasicos.observacoesMedicas}
                     </p>
                   </div>
                 </>
               )}
             </div>
 
-            {/* Erro de submit */}
             {submitError && (
               <p className="text-sm text-destructive text-center">{submitError}</p>
             )}
@@ -572,7 +454,7 @@ export function NovoAlunoModal({
             Voltar
           </Button>
 
-          {passoAtual < 3 ? (
+          {passoAtual < 2 ? (
             <Button type="button" onClick={avancarPasso}>
               Próximo
               <ArrowRight className="h-4 w-4 ml-2" />
