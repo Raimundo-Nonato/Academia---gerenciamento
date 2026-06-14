@@ -104,7 +104,45 @@ export interface Pagamento {
 }
 
 /**
+ * Exercício dentro de um grupo muscular.
+ * Todos os campos são editáveis e de texto livre.
+ */
+export interface ExercicioTreino {
+  id: string;
+  nome: string;
+  series: string;
+  repeticoes: string;
+  carga: string;
+  descanso: string;
+  observacoes?: string;
+}
+
+/**
+ * Grupo muscular dentro de um dia de treino.
+ * Nome livre, definido pelo personal (sem opções fixas).
+ */
+export interface GrupoMuscularTreino {
+  id: string;
+  nome: string;
+  exercicios: ExercicioTreino[];
+}
+
+/**
+ * Dia/Treino dentro da ficha.
+ * Nome livre, definido pelo personal (sem opções fixas).
+ */
+export interface DiaTreino {
+  id: string;
+  nome: string;
+  grupos: GrupoMuscularTreino[];
+}
+
+/**
  * Ficha de treino do aluno.
+ * Totalmente personalizada pelo personal: sem categorias, divisões
+ * ou modelos pré-definidos.
+ *
+ * Hierarquia: Ficha de Treino -> Dia/Treino -> Grupo Muscular -> Exercícios
  */
 export interface FichaTreino {
   id: string;
@@ -115,6 +153,7 @@ export interface FichaTreino {
   atualizadaEm: string;
   personalId?: string;
   personalNome?: string;
+  dias: DiaTreino[];
 }
 
 /**

@@ -38,6 +38,10 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  Trash2,
 } from "lucide-react";
 import {
   Sheet,
@@ -61,6 +65,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RoleGate, useHasPermission } from "@/components/auth/role-gate";
+import { FichaTreinoEditor } from "@/components/alunos/ficha-treino-editor";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/types/auth";
 import {
@@ -130,9 +135,101 @@ const MOCK_PAGAMENTOS: Pagamento[] = [
 ];
 
 const MOCK_FICHAS: FichaTreino[] = [
-  { id: "f1", nome: "Treino A - Superior", descricao: "Peito, Ombro e Tríceps", ativa: true, criadaEm: "2024-01-01", atualizadaEm: "2024-01-20", personalNome: "Carlos Trainer" },
-  { id: "f2", nome: "Treino B - Inferior", descricao: "Pernas e Glúteos", ativa: true, criadaEm: "2024-01-01", atualizadaEm: "2024-01-15", personalNome: "Carlos Trainer" },
-  { id: "f3", nome: "Treino C - Costas", descricao: "Costas e Bíceps", ativa: false, criadaEm: "2023-10-01", atualizadaEm: "2023-12-01", personalNome: "Ana Personal" },
+  {
+    id: "f1",
+    nome: "Treino A - Superior",
+    descricao: "Foco em peito, ombro e tríceps",
+    ativa: true,
+    criadaEm: "2024-01-01",
+    atualizadaEm: "2024-01-20",
+    personalNome: "Carlos Trainer",
+    dias: [
+      {
+        id: "d1",
+        nome: "Treino A",
+        grupos: [
+          {
+            id: "g1",
+            nome: "Peito",
+            exercicios: [
+              {
+                id: "e1",
+                nome: "Supino reto com barra",
+                series: "4",
+                repeticoes: "10",
+                carga: "40kg",
+                descanso: "60s",
+                observacoes: "Manter cotovelos a 45°",
+              },
+              {
+                id: "e2",
+                nome: "Crucifixo com halteres",
+                series: "3",
+                repeticoes: "12",
+                carga: "12kg",
+                descanso: "45s",
+              },
+            ],
+          },
+          {
+            id: "g2",
+            nome: "Tríceps",
+            exercicios: [
+              {
+                id: "e3",
+                nome: "Tríceps corda",
+                series: "3",
+                repeticoes: "12",
+                carga: "20kg",
+                descanso: "45s",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "f2",
+    nome: "Treino B - Inferior",
+    descricao: "Pernas e glúteos",
+    ativa: true,
+    criadaEm: "2024-01-01",
+    atualizadaEm: "2024-01-15",
+    personalNome: "Carlos Trainer",
+    dias: [
+      {
+        id: "d2",
+        nome: "Treino B",
+        grupos: [
+          {
+            id: "g3",
+            nome: "Pernas",
+            exercicios: [
+              {
+                id: "e4",
+                nome: "Leg press",
+                series: "4",
+                repeticoes: "12",
+                carga: "120kg",
+                descanso: "90s",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "f3",
+    nome: "Treino C - Costas",
+    descricao: "Costas e bíceps",
+    ativa: false,
+    criadaEm: "2023-10-01",
+    atualizadaEm: "2023-12-01",
+    personalNome: "Ana Personal",
+    dias: [],
+  },
 ];
 
 /**
@@ -203,19 +300,46 @@ function getMetodoPagamentoLabel(metodo: Pagamento["metodoPagamento"]): string {
 export function AlunoFicha({ aluno, open, onOpenChange, onRegistrarPagamento }: AlunoFichaProps) {
   const { user } = useAuth();
   const [showCPF, setShowCPF] = useState(false);
+  const [fichas, setFichas] = useState<FichaTreino[]>(MOCK_FICHAS);
+  const [fichaAbertaId, setFichaAbertaId] = useState<string | null>(null);
   const canAccessFinance = useHasPermission(60);
 
   // Usa dados mock enquanto API não está implementada
   // TODO: Buscar detalhes completos via API quando aluno mudar
   const detalhes = MOCK_DETALHES;
   const pagamentos = MOCK_PAGAMENTOS;
-  const fichas = MOCK_FICHAS;
 
   // Verifica se usuário é admin para ver CPF completo
   const isAdmin = user?.role === UserRole.ADMIN;
   const podeVerCPF = isAdmin && showCPF;
 
   if (!aluno) return null;
+
+  function atualizarFicha(fichaAtualizada: FichaTreino) {
+    setFichas((prev) =>
+      prev.map((f) => (f.id === fichaAtualizada.id ? fichaAtualizada : f))
+    );
+  }
+
+  function adicionarFicha() {
+    const novaFicha: FichaTreino = {
+      id: `f-${Date.now()}`,
+      nome: "Nova Ficha de Treino",
+      descricao: "",
+      ativa: true,
+      criadaEm: new Date().toISOString().slice(0, 10),
+      atualizadaEm: new Date().toISOString().slice(0, 10),
+      personalNome: aluno?.personalNome ?? undefined,
+      dias: [],
+    };
+    setFichas((prev) => [...prev, novaFicha]);
+    setFichaAbertaId(novaFicha.id);
+  }
+
+  function excluirFicha(fichaId: string) {
+    setFichas((prev) => prev.filter((f) => f.id !== fichaId));
+    if (fichaAbertaId === fichaId) setFichaAbertaId(null);
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -467,49 +591,89 @@ export function AlunoFicha({ aluno, open, onOpenChange, onRegistrarPagamento }: 
 
             {/* Fichas de treino */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">
-                Fichas de Treino
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Fichas de Treino
+                </h3>
+                <Button size="sm" variant="outline" onClick={adicionarFicha}>
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Nova ficha
+                </Button>
+              </div>
               <div className="grid gap-3">
-                {fichas.map((ficha) => (
-                  <Card
-                    key={ficha.id}
-                    className={ficha.ativa ? "" : "opacity-60"}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-primary/10 rounded-md">
-                            <Dumbbell className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{ficha.nome}</p>
-                              {ficha.ativa ? (
-                                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
-                                  Ativa
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">Inativa</Badge>
-                              )}
+                {fichas.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma ficha de treino cadastrada.
+                  </p>
+                )}
+                {fichas.map((ficha) => {
+                  const aberta = fichaAbertaId === ficha.id;
+                  return (
+                    <Card key={ficha.id} className={ficha.ativa ? "" : "opacity-60"}>
+                      <CardContent className="p-4 space-y-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <button
+                            type="button"
+                            className="flex items-start gap-3 text-left flex-1 min-w-0"
+                            onClick={() => setFichaAbertaId(aberta ? null : ficha.id)}
+                          >
+                            <div className="p-2 bg-primary/10 rounded-md">
+                              <Dumbbell className="h-4 w-4 text-primary" />
                             </div>
-                            {ficha.descricao && (
-                              <p className="text-sm text-muted-foreground mt-0.5">
-                                {ficha.descricao}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium truncate">{ficha.nome}</p>
+                                {ficha.ativa ? (
+                                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                                    Ativa
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary">Inativa</Badge>
+                                )}
+                              </div>
+                              {ficha.descricao && (
+                                <p className="text-sm text-muted-foreground mt-0.5">
+                                  {ficha.descricao}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Atualizada em {formatDate(ficha.atualizadaEm)}
+                                {ficha.personalNome && ` • ${ficha.personalNome}`}
                               </p>
+                            </div>
+                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {aberta ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             )}
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Atualizada em {formatDate(ficha.atualizadaEm)}
-                              {ficha.personalNome && ` • ${ficha.personalNome}`}
-                            </p>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => excluirFicha(ficha.id)}
+                              aria-label="Excluir ficha de treino"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+
+                        {aberta && (
+                          <FichaTreinoEditor
+                            ficha={ficha}
+                            nomeAluno={aluno.nome}
+                            onChange={atualizarFicha}
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
+
 
             {/* Último check-in */}
             <div className="p-4 bg-muted/50 rounded-lg">
