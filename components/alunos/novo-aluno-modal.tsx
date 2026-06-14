@@ -291,7 +291,7 @@ export function NovoAlunoModal({
         {passoAtual === 1 && (
           <form className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="nome">Nome completo *</Label>
                 <Input
                   id="nome"
@@ -305,7 +305,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
@@ -320,7 +320,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="dataNascimento">Data de nascimento *</Label>
                 <Input
                   id="dataNascimento"
@@ -334,7 +334,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input
                   id="telefone"
@@ -348,7 +348,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="cpf">CPF</Label>
                 <Input
                   id="cpf"
@@ -380,9 +380,9 @@ export function NovoAlunoModal({
               </div>
 
               {/* Seleção de forma de pagamento */}
-              <div className="col-span-2">
+              <div className="col-span-2 space-y-2">
                 <Label>Forma de pagamento da mensalidade *</Label>
-                <div className="mt-2 grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {(["pix", "dinheiro"] as const).map((metodo) => {
                     const isSelected = formPasso2.watch("metodoPagamento") === metodo;
                     const Icon = metodo === "pix" ? QrCode : Banknote;
@@ -415,7 +415,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="dataInicio">Data de início *</Label>
                 <Input
                   id="dataInicio"
@@ -429,7 +429,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="personalId">Personal Trainer (opcional)</Label>
                 <Select
                   value={formPasso2.watch("personalId") || "sem_personal"}
@@ -451,7 +451,7 @@ export function NovoAlunoModal({
                 </Select>
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="observacoesMedicas">
                   Observações médicas (opcional)
                 </Label>
