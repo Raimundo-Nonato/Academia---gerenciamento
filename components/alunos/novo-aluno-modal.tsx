@@ -33,9 +33,6 @@ import {
   QrCode,
   ClipboardCheck,
   Loader2,
-  Dumbbell,
-  Plus,
-  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -56,15 +53,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  MetodoPagamentoCadastro,
-  NovoAlunoData,
-  MENSALIDADE_PADRAO,
-  CategoriaExercicio,
-  Exercicio,
-  CATEGORIAS_MUSCULARES,
-  CategoriaMuscullar,
-} from "@/types/aluno";
+import { MetodoPagamentoCadastro, NovoAlunoData, MENSALIDADE_PADRAO } from "@/types/aluno";
 
 // ============ SCHEMAS DE VALIDAÇÃO (Zod) ============
 
@@ -126,29 +115,8 @@ interface NovoAlunoModalProps {
 const PASSOS = [
   { numero: 1, titulo: "Dados Básicos", icon: User },
   { numero: 2, titulo: "Pagamento", icon: Banknote },
-  { numero: 3, titulo: "Treino", icon: Dumbbell },
-  { numero: 4, titulo: "Confirmação", icon: ClipboardCheck },
+  { numero: 3, titulo: "Confirmação", icon: ClipboardCheck },
 ];
-
-// ============ UTILITÁRIOS FICHA DE TREINO ============
-
-function generateId(): string {
-  return `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function getCategoriaColor(categoria: CategoriaMuscullar): string {
-  const colors: Record<CategoriaMuscullar, string> = {
-    Peito: "text-rose-600 bg-rose-500/10",
-    Costas: "text-blue-600 bg-blue-500/10",
-    Ombro: "text-purple-600 bg-purple-500/10",
-    "Bíceps": "text-emerald-600 bg-emerald-500/10",
-    "Tríceps": "text-orange-600 bg-orange-500/10",
-    Perna: "text-cyan-600 bg-cyan-500/10",
-    "Abdômen": "text-yellow-600 bg-yellow-500/10",
-    Cardio: "text-pink-600 bg-pink-500/10",
-  };
-  return colors[categoria] ?? "text-muted-foreground bg-muted";
-}
 
 export function NovoAlunoModal({
   open,
@@ -164,8 +132,6 @@ export function NovoAlunoModal({
   // Estado para armazenar dados entre passos
   const [dadosBasicos, setDadosBasicos] = useState<DadosBasicosForm | null>(null);
   const [dadosPlano, setDadosPlano] = useState<PlanoForm | null>(null);
-  // Passo 3: Ficha de treino (totalmente opcional)
-  const [categoriasFicha, setCategoriasFicha] = useState<CategoriaExercicio[]>([]);
 
   // Form do Passo 1
   const formPasso1 = useForm<DadosBasicosForm>({
@@ -206,9 +172,6 @@ export function NovoAlunoModal({
         setDadosPlano(formPasso2.getValues());
         setPassoAtual(3);
       }
-    } else if (passoAtual === 3) {
-      // Ficha de treino é opcional — avança sem validação
-      setPassoAtual(4);
     }
   };
 
@@ -234,7 +197,6 @@ export function NovoAlunoModal({
       await onSave({
         ...dadosBasicos,
         ...dadosPlano,
-        fichaTreino: categoriasFicha.length > 0 ? categoriasFicha : undefined,
       });
 
       // Reseta e fecha
@@ -254,7 +216,6 @@ export function NovoAlunoModal({
     setPassoAtual(1);
     setDadosBasicos(null);
     setDadosPlano(null);
-    setCategoriasFicha([]);
     formPasso1.reset();
     formPasso2.reset();
     setSubmitError(null);
@@ -508,220 +469,8 @@ export function NovoAlunoModal({
           </form>
         )}
 
-        {/* ============ PASSO 3: FICHA DE TREINO (OPCIONAL) ============ */}
-        {passoAtual === 3 && (
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-              <Dumbbell className="h-4 w-4 shrink-0" />
-              <p>
-                Este passo é <strong>opcional</strong>. Você pode pular e adicionar
-                a ficha de treino depois, no perfil do aluno.
-              </p>
-            </div>
-
-            {/* Categorias existentes */}
-            {categoriasFicha.length > 0 && (
-              <div className="space-y-3">
-                {categoriasFicha.map((cat, catIdx) => {
-                  const colorClass = getCategoriaColor(cat.categoria);
-                  return (
-                    <div key={cat.categoria} className="rounded-lg border p-3 space-y-3">
-                      {/* Cabeçalho da categoria */}
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colorClass}`}>
-                          {cat.categoria}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCategoriasFicha((prev) =>
-                              prev.filter((_, i) => i !== catIdx)
-                            )
-                          }
-                          className="text-destructive hover:text-destructive/80 p-1"
-                          aria-label={`Remover ${cat.categoria}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Cabeçalho colunas */}
-                      <div className="grid grid-cols-[1fr_60px_72px_32px] gap-2 text-xs text-muted-foreground">
-                        <span>Exercício</span>
-                        <span className="text-center">Séries</span>
-                        <span className="text-center">Reps</span>
-                        <span />
-                      </div>
-
-                      {/* Exercícios */}
-                      <div className="space-y-2">
-                        {cat.exercicios.map((ex, exIdx) => (
-                          <div key={ex.id} className="space-y-1">
-                            <div className="grid grid-cols-[1fr_60px_72px_32px] gap-2 items-center">
-                              <Input
-                                value={ex.nome}
-                                onChange={(e) => {
-                                  setCategoriasFicha((prev) => {
-                                    const next = [...prev];
-                                    next[catIdx] = {
-                                      ...next[catIdx],
-                                      exercicios: next[catIdx].exercicios.map((e2, i) =>
-                                        i === exIdx ? { ...e2, nome: e.target.value } : e2
-                                      ),
-                                    };
-                                    return next;
-                                  });
-                                }}
-                                placeholder="Nome"
-                                className="h-7 text-sm"
-                              />
-                              <Input
-                                type="number"
-                                min={1}
-                                value={ex.series}
-                                onChange={(e) => {
-                                  setCategoriasFicha((prev) => {
-                                    const next = [...prev];
-                                    next[catIdx] = {
-                                      ...next[catIdx],
-                                      exercicios: next[catIdx].exercicios.map((e2, i) =>
-                                        i === exIdx ? { ...e2, series: Number(e.target.value) || 1 } : e2
-                                      ),
-                                    };
-                                    return next;
-                                  });
-                                }}
-                                className="h-7 text-sm text-center"
-                              />
-                              <Input
-                                value={ex.repeticoes}
-                                onChange={(e) => {
-                                  setCategoriasFicha((prev) => {
-                                    const next = [...prev];
-                                    next[catIdx] = {
-                                      ...next[catIdx],
-                                      exercicios: next[catIdx].exercicios.map((e2, i) =>
-                                        i === exIdx ? { ...e2, repeticoes: e.target.value } : e2
-                                      ),
-                                    };
-                                    return next;
-                                  });
-                                }}
-                                placeholder="Reps"
-                                className="h-7 text-sm text-center"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setCategoriasFicha((prev) => {
-                                    const next = [...prev];
-                                    next[catIdx] = {
-                                      ...next[catIdx],
-                                      exercicios: next[catIdx].exercicios.filter((_, i) => i !== exIdx),
-                                    };
-                                    return next;
-                                  });
-                                }}
-                                className="text-destructive hover:text-destructive/80 flex items-center justify-center"
-                                aria-label="Remover exercício"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                            <Input
-                              value={ex.observacoes ?? ""}
-                              onChange={(e) => {
-                                setCategoriasFicha((prev) => {
-                                  const next = [...prev];
-                                  next[catIdx] = {
-                                    ...next[catIdx],
-                                    exercicios: next[catIdx].exercicios.map((e2, i) =>
-                                      i === exIdx
-                                        ? { ...e2, observacoes: e.target.value || undefined }
-                                        : e2
-                                    ),
-                                  };
-                                  return next;
-                                });
-                              }}
-                              placeholder="Observações (opcional)"
-                              className="h-6 text-xs text-muted-foreground"
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Adicionar exercício */}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="w-full h-7 text-xs border border-dashed"
-                        onClick={() => {
-                          const novoEx: Exercicio = {
-                            id: generateId(),
-                            nome: "",
-                            series: 3,
-                            repeticoes: "12",
-                          };
-                          setCategoriasFicha((prev) => {
-                            const next = [...prev];
-                            next[catIdx] = {
-                              ...next[catIdx],
-                              exercicios: [...next[catIdx].exercicios, novoEx],
-                            };
-                            return next;
-                          });
-                        }}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Adicionar exercício
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Botões para adicionar categorias */}
-            {CATEGORIAS_MUSCULARES.filter(
-              (c) => !categoriasFicha.some((cf) => cf.categoria === c)
-            ).length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {categoriasFicha.length === 0
-                    ? "Selecione uma categoria para começar"
-                    : "Adicionar categoria"}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIAS_MUSCULARES.filter(
-                    (c) => !categoriasFicha.some((cf) => cf.categoria === c)
-                  ).map((cat) => (
-                    <Button
-                      key={cat}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() =>
-                        setCategoriasFicha((prev) => [
-                          ...prev,
-                          { categoria: cat, exercicios: [] },
-                        ])
-                      }
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      {cat}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ============ PASSO 4: CONFIRMAÇÃO ============ */}
-        {passoAtual === 4 && dadosBasicos && dadosPlano && (
+        {/* ============ PASSO 3: CONFIRMAÇÃO ============ */}
+        {passoAtual === 3 && dadosBasicos && dadosPlano && (
           <div className="space-y-4 py-4">
             <div className="rounded-lg border p-4 space-y-4">
               <div>
@@ -800,23 +549,6 @@ export function NovoAlunoModal({
                   </div>
                 </>
               )}
-
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Ficha de Treino</h4>
-                {categoriasFicha.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Não cadastrada (pode ser adicionada depois)</p>
-                ) : (
-                  <dl className="text-sm space-y-0.5">
-                    {categoriasFicha.map((c) => (
-                      <div key={c.categoria} className="flex gap-2">
-                        <dt className="text-muted-foreground shrink-0">{c.categoria}:</dt>
-                        <dd>{c.exercicios.length} exercício(s)</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-              </div>
             </div>
 
             {/* Erro de submit */}
@@ -840,9 +572,9 @@ export function NovoAlunoModal({
             Voltar
           </Button>
 
-          {passoAtual < 4 ? (
+          {passoAtual < 3 ? (
             <Button type="button" onClick={avancarPasso}>
-              {passoAtual === 3 ? "Revisar" : "Próximo"}
+              Próximo
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
