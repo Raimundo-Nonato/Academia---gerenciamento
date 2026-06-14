@@ -262,7 +262,10 @@ export interface NovoAlunoPlano {
 /**
  * Interface completa para criação de aluno.
  */
-export interface NovoAlunoData extends NovoAlunoDadosBasicos, NovoAlunoPlano {}
+export interface NovoAlunoData extends NovoAlunoDadosBasicos, NovoAlunoPlano {
+  /** Ficha de treino inicial (opcional - pode ser criada depois no perfil do aluno) */
+  fichaTreino?: CategoriaExercicio[];
+}
 
 /**
  * ============================================================================
