@@ -5,28 +5,34 @@
  * PÁGINA FINANCEIRA
  * ============================================================================
  *
- * Gestão financeira da academia.
+ * Gestão financeira da academia com lançamentos manuais.
  *
  * ACESSO: Apenas gerentes e administradores (minLevel: 60)
  *
  * FUNCIONALIDADES:
- * - KPIs do mês (receita, despesas, lucro, inadimplência)
- * - Gráfico de evolução Receitas vs Despesas (6 meses)
- * - Últimas transações
- *
- * TODO: Integrar com gateway de pagamento
- * TODO: Contas a pagar/receber completas
+ * - Cadastro manual de lançamentos (Mensalidade, Despesa, Estorno)
+ * - KPIs calculados dinamicamente dos lançamentos
+ * - Gráfico de evolução Receitas vs Despesas (6 meses) alimentado pelos lançamentos
+ * - Lista de lançamentos com edição e exclusão
  */
 
-import { format, subDays, subMonths } from "date-fns";
+import { useState, useMemo } from "react";
+import { format, subMonths, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  AlertCircle,
+  RotateCcw,
+  Plus,
+  Pencil,
+  Trash2,
+  Eye,
   ArrowUpRight,
   ArrowDownRight,
+  RefreshCw,
+  X,
+  Check,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/layout";
@@ -54,25 +60,68 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 
-// ============ DADOS MOCK ============
-// TODO: Substituir por dados da API
+// ============ TIPOS ============
 
-/** Últimos 6 meses com labels reais (ex: "jan", "fev"...). */
-const EVOLUCAO_FINANCEIRA = [
-  { receitas: 38200, despesas: 16900 },
-  { receitas: 39800, despesas: 17500 },
-  { receitas: 41200, despesas: 16800 },
-  { receitas: 40100, despesas: 18900 },
-  { receitas: 43600, despesas: 17200 },
-  { receitas: 45230, despesas: 18450 },
-].map((dados, index, array) => ({
-  ...dados,
-  mes: format(subMonths(new Date(), array.length - 1 - index), "MMM", {
-    locale: ptBR,
-  }),
-}));
+type Categoria = "mensalidade" | "despesa" | "estorno";
+type FormaPagamento = "pix" | "dinheiro";
+
+interface Lancamento {
+  id: string;
+  descricao: string;
+  valor: number;
+  data: string;
+  categoria: Categoria;
+  formaPagamento: FormaPagamento;
+  criadoEm: string;
+}
+
+// ============ CONSTANTES ============
+
+const categoriaConfig: Record<Categoria, { label: string; badgeClass: string; icon: React.ElementType; valorClass: string }> = {
+  mensalidade: {
+    label: "Mensalidade",
+    badgeClass: "bg-success/10 text-success",
+    icon: ArrowUpRight,
+    valorClass: "text-success",
+  },
+  despesa: {
+    label: "Despesa",
+    badgeClass: "bg-destructive/10 text-destructive",
+    icon: ArrowDownRight,
+    valorClass: "text-destructive",
+  },
+  estorno: {
+    label: "Estorno",
+    badgeClass: "bg-warning/10 text-warning",
+    icon: RefreshCw,
+    valorClass: "text-warning",
+  },
+};
+
+const formaPagamentoConfig: Record<FormaPagamento, string> = {
+  pix: "PIX",
+  dinheiro: "Dinheiro",
+};
 
 const chartConfig = {
   receitas: {
@@ -85,28 +134,46 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const dataRelativa = (dias: number) => format(subDays(new Date(), dias), "yyyy-MM-dd");
+// ============ HELPERS ============
 
-const MOCK_TRANSACOES = [
-  { id: "1", descricao: "Mensalidade - João Silva", tipo: "entrada", valor: 150, data: dataRelativa(1), status: "confirmado" },
-  { id: "2", descricao: "Energia Elétrica", tipo: "saida", valor: 1200, data: dataRelativa(2), status: "confirmado" },
-  { id: "3", descricao: "Mensalidade - Maria Santos", tipo: "entrada", valor: 150, data: dataRelativa(3), status: "confirmado" },
-  { id: "4", descricao: "Manutenção Equipamentos", tipo: "saida", valor: 800, data: dataRelativa(4), status: "pendente" },
-  { id: "5", descricao: "Mensalidade - Pedro Oliveira", tipo: "entrada", valor: 450, data: dataRelativa(6), status: "confirmado" },
-];
+function gerarId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
-const tipoColors: Record<string, string> = {
-  entrada: "text-success",
-  saida: "text-destructive",
+function parseMoeda(valor: string): number {
+  // Suporta "R$ 1.234,56", "1.234,56", "1234.56", "1234,56"
+  const limpo = valor
+    .replace(/R\$\s*/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const num = parseFloat(limpo);
+  return isNaN(num) ? 0 : num;
+}
+
+function hoje(): string {
+  return format(new Date(), "yyyy-MM-dd");
+}
+
+// ============ FORM STATE ============
+
+interface FormState {
+  descricao: string;
+  valor: string;
+  data: string;
+  categoria: Categoria | "";
+  formaPagamento: FormaPagamento | "";
+}
+
+const FORM_VAZIO: FormState = {
+  descricao: "",
+  valor: "",
+  data: hoje(),
+  categoria: "",
+  formaPagamento: "",
 };
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  confirmado: { label: "Confirmado", className: "bg-success/10 text-success" },
-  pendente: { label: "Pendente", className: "bg-warning/10 text-warning" },
-  cancelado: { label: "Cancelado", className: "bg-muted text-muted-foreground" },
-};
+// ============ COMPONENTES AUXILIARES ============
 
-/** Card de KPI financeiro. */
 function KpiCard({
   titulo,
   valor,
@@ -118,7 +185,7 @@ function KpiCard({
 }: {
   titulo: string;
   valor: string;
-  subtitulo: React.ReactNode;
+  subtitulo?: React.ReactNode;
   icon: React.ElementType;
   iconClass: string;
   valorClass?: string;
@@ -138,59 +205,390 @@ function KpiCard({
         <p className={cn("font-display text-2xl font-bold tabular-nums", valorClass)}>
           {valor}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">{subtitulo}</p>
+        {subtitulo && (
+          <p className="mt-1 text-xs text-muted-foreground">{subtitulo}</p>
+        )}
       </CardContent>
     </Card>
   );
 }
 
+// ============ MODAL DE VISUALIZAÇÃO ============
+
+function ModalVisualizacao({
+  lancamento,
+  onClose,
+}: {
+  lancamento: Lancamento | null;
+  onClose: () => void;
+}) {
+  if (!lancamento) return null;
+  const cat = categoriaConfig[lancamento.categoria];
+  const Icon = cat.icon;
+  return (
+    <Dialog open={!!lancamento} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Detalhe do Lançamento</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="flex items-start gap-3">
+            <span className={cn("mt-0.5 rounded-md p-2", cat.badgeClass.replace("text-", "bg-").replace("bg-", "bg-opacity-10 text-") )}>
+              <Icon className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="font-semibold">{lancamento.descricao}</p>
+              <p className={cn("text-lg font-bold tabular-nums", cat.valorClass)}>
+                {lancamento.categoria === "despesa" ? "- " : "+ "}
+                {formatCurrency(lancamento.valor)}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-muted-foreground">Data</p>
+              <p className="font-medium">{formatDate(lancamento.data)}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Categoria</p>
+              <Badge variant="secondary" className={cat.badgeClass}>{cat.label}</Badge>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Forma de Pagamento</p>
+              <p className="font-medium">{formaPagamentoConfig[lancamento.formaPagamento]}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Cadastrado em</p>
+              <p className="font-medium">{formatDate(lancamento.criadoEm.slice(0, 10))}</p>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============ MODAL DE FORMULÁRIO ============
+
+function ModalFormulario({
+  aberto,
+  titulo,
+  form,
+  erro,
+  onClose,
+  onChange,
+  onSubmit,
+}: {
+  aberto: boolean;
+  titulo: string;
+  form: FormState;
+  erro: string;
+  onClose: () => void;
+  onChange: (campo: keyof FormState, valor: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <Dialog open={aberto} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{titulo}</DialogTitle>
+          <DialogDescription>
+            Preencha os campos abaixo para registrar o lançamento.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <div className="space-y-1.5">
+            <Label htmlFor="descricao">Descrição</Label>
+            <Input
+              id="descricao"
+              placeholder="Ex: Mensalidade João Silva"
+              value={form.descricao}
+              onChange={(e) => onChange("descricao", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="valor">Valor</Label>
+            <Input
+              id="valor"
+              placeholder="Ex: 150,00"
+              value={form.valor}
+              onChange={(e) => onChange("valor", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="data">Data</Label>
+            <Input
+              id="data"
+              type="date"
+              value={form.data}
+              onChange={(e) => onChange("data", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Categoria</Label>
+            <Select
+              value={form.categoria}
+              onValueChange={(v) => onChange("categoria", v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mensalidade">Mensalidade</SelectItem>
+                <SelectItem value="despesa">Despesa</SelectItem>
+                <SelectItem value="estorno">Estorno</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Forma de Pagamento</Label>
+            <Select
+              value={form.formaPagamento}
+              onValueChange={(v) => onChange("formaPagamento", v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pix">PIX</SelectItem>
+                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {erro && <p className="text-sm text-destructive">{erro}</p>}
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose}>
+            <X className="mr-1.5 h-4 w-4" /> Cancelar
+          </Button>
+          <Button onClick={onSubmit}>
+            <Check className="mr-1.5 h-4 w-4" /> Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============ MODAL DE CONFIRMAÇÃO ============
+
+function ModalConfirmacao({
+  aberto,
+  onClose,
+  onConfirmar,
+}: {
+  aberto: boolean;
+  onClose: () => void;
+  onConfirmar: () => void;
+}) {
+  return (
+    <Dialog open={aberto} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Excluir lançamento?</DialogTitle>
+          <DialogDescription>
+            Esta ação não pode ser desfeita. O lançamento será removido permanentemente e os valores serão recalculados.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="destructive" onClick={onConfirmar}>
+            <Trash2 className="mr-1.5 h-4 w-4" /> Excluir
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============ PÁGINA PRINCIPAL ============
+
 export default function FinanceiroPage() {
+  const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
+
+  // Modal: novo lançamento
+  const [modalNovo, setModalNovo] = useState(false);
+  const [formNovo, setFormNovo] = useState<FormState>(FORM_VAZIO);
+  const [erroNovo, setErroNovo] = useState("");
+
+  // Modal: edição
+  const [lancamentoEditando, setLancamentoEditando] = useState<Lancamento | null>(null);
+  const [formEdicao, setFormEdicao] = useState<FormState>(FORM_VAZIO);
+  const [erroEdicao, setErroEdicao] = useState("");
+
+  // Modal: visualização
+  const [lancamentoVisualizando, setLancamentoVisualizando] = useState<Lancamento | null>(null);
+
+  // Modal: exclusão
+  const [idExcluindo, setIdExcluindo] = useState<string | null>(null);
+
+  // ============ CÁLCULOS ============
+
+  const resumo = useMemo(() => {
+    let totalMensalidades = 0;
+    let totalDespesas = 0;
+    let totalEstornos = 0;
+
+    for (const l of lancamentos) {
+      if (l.categoria === "mensalidade") totalMensalidades += l.valor;
+      else if (l.categoria === "despesa") totalDespesas += l.valor;
+      else if (l.categoria === "estorno") totalEstornos += l.valor;
+    }
+
+    // Estornos reduzem as receitas (mensalidades)
+    const saldo = totalMensalidades - totalEstornos - totalDespesas;
+
+    return { totalMensalidades, totalDespesas, totalEstornos, saldo };
+  }, [lancamentos]);
+
+  // Gráfico: últimos 6 meses
+  const evolucaoFinanceira = useMemo(() => {
+    return Array.from({ length: 6 }, (_, index) => {
+      const mes = subMonths(new Date(), 5 - index);
+      const inicio = startOfMonth(mes);
+      const fim = endOfMonth(mes);
+
+      let receitas = 0;
+      let despesas = 0;
+
+      for (const l of lancamentos) {
+        const data = parseISO(l.data);
+        if (!isWithinInterval(data, { start: inicio, end: fim })) continue;
+        if (l.categoria === "mensalidade") receitas += l.valor;
+        else if (l.categoria === "estorno") receitas -= l.valor; // estorno reduz receita
+        else if (l.categoria === "despesa") despesas += l.valor;
+      }
+
+      return {
+        mes: format(mes, "MMM", { locale: ptBR }),
+        receitas: Math.max(0, receitas),
+        despesas,
+      };
+    });
+  }, [lancamentos]);
+
+  // ============ HANDLERS ============
+
+  function validarForm(form: FormState): string {
+    if (!form.descricao.trim()) return "Informe a descrição.";
+    if (!form.valor.trim()) return "Informe o valor.";
+    const valor = parseMoeda(form.valor);
+    if (valor <= 0) return "Informe um valor válido maior que zero.";
+    if (!form.data) return "Informe a data.";
+    if (!form.categoria) return "Selecione a categoria.";
+    if (!form.formaPagamento) return "Selecione a forma de pagamento.";
+    return "";
+  }
+
+  function handleCriar() {
+    const erro = validarForm(formNovo);
+    if (erro) { setErroNovo(erro); return; }
+
+    const novo: Lancamento = {
+      id: gerarId(),
+      descricao: formNovo.descricao.trim(),
+      valor: parseMoeda(formNovo.valor),
+      data: formNovo.data,
+      categoria: formNovo.categoria as Categoria,
+      formaPagamento: formNovo.formaPagamento as FormaPagamento,
+      criadoEm: new Date().toISOString(),
+    };
+
+    setLancamentos((prev) => [novo, ...prev]);
+    setModalNovo(false);
+    setFormNovo(FORM_VAZIO);
+    setErroNovo("");
+  }
+
+  function abrirEdicao(lancamento: Lancamento) {
+    setLancamentoEditando(lancamento);
+    setFormEdicao({
+      descricao: lancamento.descricao,
+      valor: lancamento.valor.toFixed(2).replace(".", ","),
+      data: lancamento.data,
+      categoria: lancamento.categoria,
+      formaPagamento: lancamento.formaPagamento,
+    });
+    setErroEdicao("");
+  }
+
+  function handleSalvarEdicao() {
+    if (!lancamentoEditando) return;
+    const erro = validarForm(formEdicao);
+    if (erro) { setErroEdicao(erro); return; }
+
+    setLancamentos((prev) =>
+      prev.map((l) =>
+        l.id === lancamentoEditando.id
+          ? {
+              ...l,
+              descricao: formEdicao.descricao.trim(),
+              valor: parseMoeda(formEdicao.valor),
+              data: formEdicao.data,
+              categoria: formEdicao.categoria as Categoria,
+              formaPagamento: formEdicao.formaPagamento as FormaPagamento,
+            }
+          : l
+      )
+    );
+    setLancamentoEditando(null);
+  }
+
+  function handleExcluir() {
+    if (!idExcluindo) return;
+    setLancamentos((prev) => prev.filter((l) => l.id !== idExcluindo));
+    setIdExcluindo(null);
+  }
+
+  // ============ RENDER ============
+
   return (
     <>
-      <PageHeader title="Financeiro" description="Gestão financeira da academia" />
+      <PageHeader
+        title="Financeiro"
+        description="Gestão financeira da academia"
+        action={{
+          label: "Novo Lançamento",
+          icon: Plus,
+          onClick: () => { setModalNovo(true); setFormNovo(FORM_VAZIO); setErroNovo(""); },
+        }}
+      />
 
-      {/* ============ CARDS DE RESUMO ============ */}
+      {/* ============ RESUMO FINANCEIRO ============ */}
       <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          titulo="Receita do Mês"
-          valor={formatCurrency(45230)}
-          subtitulo={
-            <>
-              <span className="text-success">+12%</span> vs mês anterior
-            </>
-          }
+          titulo="Total de Mensalidades"
+          valor={formatCurrency(resumo.totalMensalidades)}
           icon={TrendingUp}
           iconClass="bg-success/10 text-success"
           valorClass="text-success"
         />
         <KpiCard
-          titulo="Despesas do Mês"
-          valor={formatCurrency(18450)}
-          subtitulo={
-            <>
-              <span className="text-destructive">+5%</span> vs mês anterior
-            </>
-          }
+          titulo="Total de Despesas"
+          valor={formatCurrency(resumo.totalDespesas)}
           icon={TrendingDown}
           iconClass="bg-destructive/10 text-destructive"
           valorClass="text-destructive"
           delay={60}
         />
         <KpiCard
-          titulo="Lucro Líquido"
-          valor={formatCurrency(26780)}
-          subtitulo="Margem de 59%"
-          icon={DollarSign}
-          iconClass="bg-primary/10 text-primary"
+          titulo="Total de Estornos"
+          valor={formatCurrency(resumo.totalEstornos)}
+          icon={RotateCcw}
+          iconClass="bg-warning/10 text-warning"
+          valorClass="text-warning"
           delay={120}
         />
         <KpiCard
-          titulo="Inadimplência"
-          valor={formatCurrency(2340)}
-          subtitulo="8 alunos em atraso"
-          icon={AlertCircle}
-          iconClass="bg-warning/10 text-warning"
-          valorClass="text-warning"
+          titulo="Saldo Atual"
+          valor={formatCurrency(resumo.saldo)}
+          subtitulo="Mensalidades − Estornos − Despesas"
+          icon={DollarSign}
+          iconClass="bg-primary/10 text-primary"
+          valorClass={resumo.saldo >= 0 ? "text-success" : "text-destructive"}
           delay={180}
         />
       </div>
@@ -205,7 +603,7 @@ export default function FinanceiroPage() {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-72 w-full">
-            <AreaChart data={EVOLUCAO_FINANCEIRA} margin={{ left: 12 }}>
+            <AreaChart data={evolucaoFinanceira} margin={{ left: 12 }}>
               <defs>
                 <linearGradient id="fillReceitas" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.5} />
@@ -227,9 +625,7 @@ export default function FinanceiroPage() {
                 tickLine={false}
                 axisLine={false}
                 width={64}
-                tickFormatter={(valor: number) =>
-                  `${Math.round(valor / 1000)}k`
-                }
+                tickFormatter={(valor: number) => `${Math.round(valor / 1000)}k`}
               />
               <ChartTooltip
                 cursor={false}
@@ -272,62 +668,159 @@ export default function FinanceiroPage() {
         </CardContent>
       </Card>
 
-      {/* ============ ÚLTIMAS TRANSAÇÕES ============ */}
+      {/* ============ LISTA DE LANÇAMENTOS ============ */}
       <Card className="rise" style={{ animationDelay: "320ms" }}>
-        <CardHeader>
-          <CardTitle>Últimas Transações</CardTitle>
-          <CardDescription>Movimentações financeiras recentes</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Lançamentos</CardTitle>
+            <CardDescription>
+              {lancamentos.length === 0
+                ? "Nenhum lançamento cadastrado"
+                : `${lancamentos.length} lançamento${lancamentos.length !== 1 ? "s" : ""} registrado${lancamentos.length !== 1 ? "s" : ""}`}
+            </CardDescription>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => { setModalNovo(true); setFormNovo(FORM_VAZIO); setErroNovo(""); }}
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Adicionar
+          </Button>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {MOCK_TRANSACOES.map((transacao) => {
-                const status = statusConfig[transacao.status];
-
-                return (
-                  <TableRow key={transacao.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {transacao.tipo === "entrada" ? (
-                          <ArrowUpRight className="h-4 w-4 shrink-0 text-success" />
-                        ) : (
-                          <ArrowDownRight className="h-4 w-4 shrink-0 text-destructive" />
-                        )}
-                        {transacao.descricao}
-                      </div>
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {formatDate(transacao.data)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className={status.className}>
-                        {status.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        "text-right font-medium tabular-nums",
-                        tipoColors[transacao.tipo]
-                      )}
-                    >
-                      {transacao.tipo === "entrada" ? "+" : "-"}
-                      {formatCurrency(transacao.valor)}
-                    </TableCell>
+        <CardContent className="p-0">
+          {lancamentos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <DollarSign className="mb-3 h-10 w-10 opacity-30" />
+              <p className="text-sm">Nenhum lançamento ainda.</p>
+              <p className="text-xs">Clique em &ldquo;Novo Lançamento&rdquo; para começar.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Pagamento</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {lancamentos.map((lancamento) => {
+                    const cat = categoriaConfig[lancamento.categoria];
+                    const Icon = cat.icon;
+                    return (
+                      <TableRow key={lancamento.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Icon className={cn("h-4 w-4 shrink-0", cat.valorClass)} />
+                            <span className="font-medium">{lancamento.descricao}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="tabular-nums text-muted-foreground">
+                          {formatDate(lancamento.data)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className={cat.badgeClass}>
+                            {cat.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formaPagamentoConfig[lancamento.formaPagamento]}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-right font-semibold tabular-nums",
+                            cat.valorClass
+                          )}
+                        >
+                          {lancamento.categoria === "despesa" ? "− " : "+ "}
+                          {formatCurrency(lancamento.valor)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Visualizar"
+                              onClick={() => setLancamentoVisualizando(lancamento)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Editar"
+                              onClick={() => abrirEdicao(lancamento)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              title="Excluir"
+                              onClick={() => setIdExcluindo(lancamento.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* ============ MODAIS ============ */}
+
+      {/* Novo lançamento */}
+      <ModalFormulario
+        aberto={modalNovo}
+        titulo="Novo Lançamento"
+        form={formNovo}
+        erro={erroNovo}
+        onClose={() => setModalNovo(false)}
+        onChange={(campo, valor) => {
+          setFormNovo((prev) => ({ ...prev, [campo]: valor }));
+          setErroNovo("");
+        }}
+        onSubmit={handleCriar}
+      />
+
+      {/* Edição */}
+      <ModalFormulario
+        aberto={!!lancamentoEditando}
+        titulo="Editar Lançamento"
+        form={formEdicao}
+        erro={erroEdicao}
+        onClose={() => setLancamentoEditando(null)}
+        onChange={(campo, valor) => {
+          setFormEdicao((prev) => ({ ...prev, [campo]: valor }));
+          setErroEdicao("");
+        }}
+        onSubmit={handleSalvarEdicao}
+      />
+
+      {/* Visualização */}
+      <ModalVisualizacao
+        lancamento={lancamentoVisualizando}
+        onClose={() => setLancamentoVisualizando(null)}
+      />
+
+      {/* Confirmação de exclusão */}
+      <ModalConfirmacao
+        aberto={!!idExcluindo}
+        onClose={() => setIdExcluindo(null)}
+        onConfirmar={handleExcluir}
+      />
     </>
   );
 }
