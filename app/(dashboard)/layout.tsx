@@ -17,7 +17,6 @@ import { type ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layout";
 import { useAuth } from "@/contexts/auth-context";
-import { AlunosProvider } from "@/contexts/alunos-context";
 import { Spinner } from "@/components/ui/spinner";
 
 interface DashboardLayoutWrapperProps {
@@ -46,18 +45,16 @@ export default function DashboardLayoutWrapper({
   }
 
   return (
-    <AlunosProvider>
-      <DashboardLayout
-        // TODO: Conectar com verificação real de sessão
-        showSessionBanner={false}
-        sessionMinutesRemaining={5}
-        onRenewSession={() => {
-          // TODO: Chamar API para renovar token
-          console.log("Renovar sessão");
-        }}
-      >
-        {children}
-      </DashboardLayout>
-    </AlunosProvider>
+    <DashboardLayout
+      // TODO: Conectar com verificação real de sessão
+      showSessionBanner={false}
+      sessionMinutesRemaining={5}
+      onRenewSession={() => {
+        // TODO: Chamar API para renovar token
+        console.log("Renovar sessão");
+      }}
+    >
+      {children}
+    </DashboardLayout>
   );
 }

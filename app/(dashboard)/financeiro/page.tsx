@@ -79,8 +79,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { useAlunos } from "@/contexts/alunos-context";
-import { toast } from "sonner";
 
 // ============ TIPOS ============
 
@@ -95,7 +93,6 @@ interface Lancamento {
   categoria: Categoria;
   formaPagamento: FormaPagamento;
   criadoEm: string;
-  emailAluno?: string;
 }
 
 // ============ CONSTANTES ============
@@ -165,8 +162,6 @@ interface FormState {
   data: string;
   categoria: Categoria | "";
   formaPagamento: FormaPagamento | "";
-  /** Obrigatório apenas quando categoria === "mensalidade" */
-  emailAluno: string;
 }
 
 const FORM_VAZIO: FormState = {
@@ -175,7 +170,6 @@ const FORM_VAZIO: FormState = {
   data: hoje(),
   categoria: "",
   formaPagamento: "",
-  emailAluno: "",
 };
 
 // ============ COMPONENTES AUXILIARES ============
@@ -239,7 +233,7 @@ function ModalVisualizacao({
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="flex items-start gap-3">
-            <span className={cn("mt-0.5 rounded-md p-2", cat.badgeClass.replace("text-", "bg-").replace("bg-", "bg-opacity-10 text-"))}>
+            <span className={cn("mt-0.5 rounded-md p-2", cat.badgeClass.replace("text-", "bg-").replace("bg-", "bg-opacity-10 text-") )}>
               <Icon className="h-5 w-5" />
             </span>
             <div>
@@ -296,8 +290,6 @@ function ModalFormulario({
   onChange: (campo: keyof FormState, valor: string) => void;
   onSubmit: () => void;
 }) {
-  const isMensalidade = form.categoria === "mensalidade";
-
   return (
     <Dialog open={aberto} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -351,24 +343,6 @@ function ModalFormulario({
               </SelectContent>
             </Select>
           </div>
-          {isMensalidade && (
-            <div className="space-y-1.5">
-              <Label htmlFor="emailAluno">
-                E-mail do Aluno{" "}
-                <span className="text-destructive" aria-hidden>*</span>
-              </Label>
-              <Input
-                id="emailAluno"
-                type="email"
-                placeholder="aluno@email.com"
-                value={form.emailAluno}
-                onChange={(e) => onChange("emailAluno", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Deve corresponder a um aluno cadastrado no sistema.
-              </p>
-            </div>
-          )}
           <div className="space-y-1.5">
             <Label>Forma de Pagamento</Label>
             <Select
@@ -433,7 +407,6 @@ function ModalConfirmacao({
 // ============ PÁGINA PRINCIPAL ============
 
 export default function FinanceiroPage() {
-  const { buscarAlunoPorEmail, registrarPagamento } = useAlunos();
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
 
   // Modal: novo lançamento
@@ -507,30 +480,12 @@ export default function FinanceiroPage() {
     if (!form.data) return "Informe a data.";
     if (!form.categoria) return "Selecione a categoria.";
     if (!form.formaPagamento) return "Selecione a forma de pagamento.";
-    if (form.categoria === "mensalidade" && !form.emailAluno.trim())
-      return "Informe o e-mail do aluno para registrar a mensalidade.";
     return "";
   }
 
   function handleCriar() {
     const erro = validarForm(formNovo);
     if (erro) { setErroNovo(erro); return; }
-
-    // Integração com módulo de Alunos: valida e atualiza ao registrar mensalidade
-    if (formNovo.categoria === "mensalidade") {
-      const aluno = buscarAlunoPorEmail(formNovo.emailAluno);
-      if (!aluno) {
-        setErroNovo("E-mail não encontrado. Verifique se o aluno está cadastrado.");
-        return;
-      }
-      const statusAnterior = aluno.status;
-      registrarPagamento(formNovo.emailAluno);
-      if (statusAnterior === "inadimplente") {
-        toast.success(`${aluno.nome} atualizado para Ativo`, {
-          description: "O status inadimplente foi removido após o registro da mensalidade.",
-        });
-      }
-    }
 
     const novo: Lancamento = {
       id: gerarId(),
@@ -569,13 +524,13 @@ export default function FinanceiroPage() {
       prev.map((l) =>
         l.id === lancamentoEditando.id
           ? {
-            ...l,
-            descricao: formEdicao.descricao.trim(),
-            valor: parseMoeda(formEdicao.valor),
-            data: formEdicao.data,
-            categoria: formEdicao.categoria as Categoria,
-            formaPagamento: formEdicao.formaPagamento as FormaPagamento,
-          }
+              ...l,
+              descricao: formEdicao.descricao.trim(),
+              valor: parseMoeda(formEdicao.valor),
+              data: formEdicao.data,
+              categoria: formEdicao.categoria as Categoria,
+              formaPagamento: formEdicao.formaPagamento as FormaPagamento,
+            }
           : l
       )
     );
