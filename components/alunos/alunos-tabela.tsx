@@ -329,9 +329,9 @@ export function AlunosTabela({
               />
             </TableHead>
             <TableHead>Nome</TableHead>
-            <TableHead className="hidden md:table-cell">Email</TableHead>
+            <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="hidden sm:table-cell">Próx. Vencimento</TableHead>
+            <TableHead>Próx. Vencimento</TableHead>
             <TableHead className="w-12">
               <span className="sr-only">Ações</span>
             </TableHead>
@@ -375,7 +375,7 @@ export function AlunosTabela({
                 </TableCell>
 
                 {/* Contato */}
-                <TableCell className="hidden md:table-cell">
+                <TableCell>
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-1.5 text-sm">
                       <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
@@ -399,7 +399,7 @@ export function AlunosTabela({
                 </TableCell>
 
                 {/* Vencimento com destaque condicional */}
-                <TableCell className="hidden sm:table-cell">
+                <TableCell>
                   <span
                     className={`text-sm ${
                       vencido

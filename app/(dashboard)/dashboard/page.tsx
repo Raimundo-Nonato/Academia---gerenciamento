@@ -146,7 +146,7 @@ function MovimentacaoChart() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-44 sm:h-56 w-full">
+        <ChartContainer config={chartConfig} className="h-56 w-full">
           <BarChart data={MOVIMENTACAO_SEMANA} margin={{ left: -20 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="dia" tickLine={false} axisLine={false} />
