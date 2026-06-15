@@ -22,7 +22,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
@@ -97,20 +96,14 @@ export function SidebarContent({ collapsed = false, onNavigate }: SidebarContent
           className="flex items-center gap-2.5"
           aria-label="wenvefit - ir para o dashboard"
         >
-          {/* Logo da marca — colapsa para ícone halter quando collapsed */}
-          {collapsed ? (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-volt text-volt-foreground">
-              <Dumbbell className="h-4 w-4" />
+          {/* Marca: halter sobre quadrado amarelo (acento da marca) */}
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-volt text-volt-foreground">
+            <Dumbbell className="h-4 w-4" />
+          </span>
+          {!collapsed && (
+            <span className="font-display text-lg font-bold tracking-tight">
+              wenvefit
             </span>
-          ) : (
-            <Image
-              src="/wenvefit-logo-marca.png"
-              alt="Wenvefit"
-              width={140}
-              height={56}
-              className="h-auto w-32"
-              priority
-            />
           )}
         </Link>
       </div>

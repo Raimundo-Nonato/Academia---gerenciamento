@@ -187,7 +187,7 @@ export function NovoAlunoModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Novo Aluno</DialogTitle>
           <DialogDescription>
@@ -240,8 +240,8 @@ export function NovoAlunoModal({
         {/* ============ PASSO 1: DADOS BÁSICOS ============ */}
         {passoAtual === 1 && (
           <form className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
                 <Label htmlFor="nome">Nome completo *</Label>
                 <Input
                   id="nome"
@@ -255,7 +255,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
                 <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
@@ -270,7 +270,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
                 <Label htmlFor="dataNascimento">Data de nascimento *</Label>
                 <Input
                   id="dataNascimento"
@@ -312,7 +312,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
                 <Label htmlFor="dataInicio">Data de início *</Label>
                 <Input
                   id="dataInicio"
@@ -326,7 +326,7 @@ export function NovoAlunoModal({
                 )}
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
                 <Label htmlFor="personalId">Personal Trainer (opcional)</Label>
                 <Select
                   value={formPasso1.watch("personalId") || "sem_personal"}
@@ -348,7 +348,7 @@ export function NovoAlunoModal({
                 </Select>
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
                 <Label htmlFor="observacoesMedicas">
                   Observações médicas (opcional)
                 </Label>

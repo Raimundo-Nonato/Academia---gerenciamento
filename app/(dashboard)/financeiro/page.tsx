@@ -647,7 +647,7 @@ export default function FinanceiroPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-72 w-full">
+          <ChartContainer config={chartConfig} className="h-52 sm:h-72 w-full">
             <AreaChart data={evolucaoFinanceira} margin={{ left: 12 }}>
               <defs>
                 <linearGradient id="fillReceitas" x1="0" y1="0" x2="0" y2="1">
@@ -744,9 +744,9 @@ export default function FinanceiroPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Descrição</TableHead>
-                    <TableHead>Data</TableHead>
+                    <TableHead className="hidden sm:table-cell">Data</TableHead>
                     <TableHead>Categoria</TableHead>
-                    <TableHead>Pagamento</TableHead>
+                    <TableHead className="hidden md:table-cell">Pagamento</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -763,7 +763,7 @@ export default function FinanceiroPage() {
                             <span className="font-medium">{lancamento.descricao}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="tabular-nums text-muted-foreground">
+                        <TableCell className="tabular-nums text-muted-foreground hidden sm:table-cell">
                           {formatDate(lancamento.data)}
                         </TableCell>
                         <TableCell>
@@ -771,7 +771,7 @@ export default function FinanceiroPage() {
                             {cat.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground hidden md:table-cell">
                           {formaPagamentoConfig[lancamento.formaPagamento]}
                         </TableCell>
                         <TableCell
