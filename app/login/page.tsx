@@ -18,7 +18,8 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Dumbbell, Eye, EyeOff, LogIn } from "lucide-react";
+import Image from "next/image";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,12 +74,14 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-sm rise">
         <CardHeader className="items-center text-center">
-          <span className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-volt text-volt-foreground">
-            <Dumbbell className="h-6 w-6" />
-          </span>
-          <h1 className="font-display text-2xl font-bold tracking-tight">
-            wenvefit
-          </h1>
+          <Image
+            src="/wenvefit-logo-marca.png"
+            alt="Wenvefit"
+            width={180}
+            height={90}
+            className="mb-2 h-auto w-44"
+            priority
+          />
           <p className="text-sm text-muted-foreground">
             Acesse sua conta para continuar
           </p>
