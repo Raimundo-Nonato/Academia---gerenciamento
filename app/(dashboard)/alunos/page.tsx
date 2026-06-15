@@ -352,23 +352,23 @@ export default function AlunosPage() {
 
       {/* ============ BARRA DE AÇÕES EM LOTE ============ */}
       {selectedIds.length > 0 && (
-        <div className="rise fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border bg-card py-2 pl-4 pr-2 shadow-lg">
+        <div className="rise fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 sm:gap-2 rounded-full border bg-card py-2 pl-3 sm:pl-4 pr-2 shadow-lg">
           <span className="whitespace-nowrap text-sm font-medium tabular-nums">
-            {selectedIds.length} selecionado(s)
+            {selectedIds.length} <span className="hidden sm:inline">selecionado(s)</span>
           </span>
           <span className="h-5 w-px bg-border" aria-hidden />
-          <Button variant="ghost" size="sm" onClick={handleExportarCSV}>
-            <Download className="mr-1.5 h-4 w-4" />
-            Exportar CSV
+          <Button variant="ghost" size="sm" onClick={handleExportarCSV} className="px-2 sm:px-3">
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1.5">Exportar CSV</span>
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={handleSuspenderSelecionados}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive px-2 sm:px-3"
           >
-            <UserX className="mr-1.5 h-4 w-4" />
-            Suspender
+            <UserX className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1.5">Suspender</span>
           </Button>
           <Button
             variant="ghost"
