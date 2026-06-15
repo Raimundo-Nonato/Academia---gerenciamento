@@ -555,6 +555,7 @@ export default function FinanceiroPage() {
       data: lancamento.data,
       categoria: lancamento.categoria,
       formaPagamento: lancamento.formaPagamento,
+      emailAluno: "",
     });
     setErroEdicao("");
   }
