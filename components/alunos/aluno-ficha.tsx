@@ -30,10 +30,14 @@ import {
   Phone,
   MapPin,
   Calendar,
+  CreditCard,
   Dumbbell,
   Eye,
   EyeOff,
   AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
   Plus,
   ChevronDown,
   ChevronRight,
@@ -52,12 +56,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { RoleGate, useHasPermission } from "@/components/auth/role-gate";
 import { FichaTreinoEditor } from "@/components/alunos/ficha-treino-editor";
 import { useAuth } from "@/contexts/auth-context";
 import { UserRole } from "@/types/auth";
 import {
   Aluno,
   AlunoDetalhes,
+  Pagamento,
   FichaTreino,
   STATUS_ALUNO_CONFIG,
 } from "@/types/aluno";
@@ -72,6 +86,11 @@ interface AlunoFichaProps {
   open: boolean;
   /** Callback para fechar */
   onOpenChange: (open: boolean) => void;
+  /**
+   * Callback para registrar pagamento do aluno.
+   * Atualiza proximoVencimento (+1 mês) e status (=> "ativo") automaticamente.
+   */
+  onRegistrarPagamento?: (aluno: Aluno) => void;
 }
 
 // ============ DADOS MOCK ============
@@ -106,6 +125,14 @@ const MOCK_DETALHES: AlunoDetalhes = {
     parentesco: "Mãe",
   },
 };
+
+const MOCK_PAGAMENTOS: Pagamento[] = [
+  { id: "pg1", alunoId: "1", data: "2024-01-15", valor: 150, status: "pago", metodoPagamento: "pix" },
+  { id: "pg2", alunoId: "1", data: "2023-12-15", valor: 150, status: "pago", metodoPagamento: "cartao_credito" },
+  { id: "pg3", alunoId: "1", data: "2023-11-15", valor: 150, status: "pago", metodoPagamento: "pix" },
+  { id: "pg4", alunoId: "1", data: "2023-10-15", valor: 150, status: "pago", metodoPagamento: "boleto" },
+  { id: "pg5", alunoId: "1", data: "2023-09-15", valor: 150, status: "estornado", metodoPagamento: "cartao_credito" },
+];
 
 const MOCK_FICHAS: FichaTreino[] = [
   {
@@ -213,6 +240,16 @@ function formatDate(data: string): string {
 }
 
 /**
+ * Formata valor monetário.
+ */
+function formatCurrency(valor: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(valor);
+}
+
+/**
  * Mascara CPF para exibição.
  */
 function maskCPF(cpf: string): string {
@@ -231,16 +268,46 @@ function getInitials(nome: string): string {
     .toUpperCase();
 }
 
+/**
+ * Ícone e cor do status de pagamento.
+ */
+function getStatusPagamentoConfig(status: Pagamento["status"]) {
+  switch (status) {
+    case "pago":
+      return { icon: CheckCircle, className: "text-emerald-600" };
+    case "pendente":
+      return { icon: Clock, className: "text-amber-600" };
+    case "cancelado":
+    case "estornado":
+      return { icon: XCircle, className: "text-red-600" };
+  }
+}
 
-export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
+/**
+ * Label do método de pagamento.
+ */
+function getMetodoPagamentoLabel(metodo: Pagamento["metodoPagamento"]): string {
+  const labels: Record<Pagamento["metodoPagamento"], string> = {
+    pix: "PIX",
+    cartao_credito: "Cartão de Crédito",
+    cartao_debito: "Cartão de Débito",
+    dinheiro: "Dinheiro",
+    boleto: "Boleto",
+  };
+  return labels[metodo];
+}
+
+export function AlunoFicha({ aluno, open, onOpenChange, onRegistrarPagamento }: AlunoFichaProps) {
   const { user } = useAuth();
   const [showCPF, setShowCPF] = useState(false);
   const [fichas, setFichas] = useState<FichaTreino[]>(MOCK_FICHAS);
   const [fichaAbertaId, setFichaAbertaId] = useState<string | null>(null);
+  const canAccessFinance = useHasPermission(60);
 
   // Usa dados mock enquanto API não está implementada
   // TODO: Buscar detalhes completos via API quando aluno mudar
   const detalhes = MOCK_DETALHES;
+  const pagamentos = MOCK_PAGAMENTOS;
 
   // Verifica se usuário é admin para ver CPF completo
   const isAdmin = user?.role === UserRole.ADMIN;
@@ -302,8 +369,12 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
         {/* ============ ABAS ============ */}
         {/* px-6: alinha o conteúdo das abas com o padding do header */}
         <Tabs defaultValue="dados" className="px-6 pb-8">
-          <TabsList className="w-full grid grid-cols-2">
+          <TabsList className={`w-full grid ${canAccessFinance ? "grid-cols-3" : "grid-cols-2"}`}>
             <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
+            {/* Aba Financeiro só aparece para gerente+ */}
+            <RoleGate minLevel={60} fallback={null}>
+              <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+            </RoleGate>
             <TabsTrigger value="treinos">Treinos</TabsTrigger>
           </TabsList>
 
@@ -412,6 +483,93 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
                 </div>
               </>
             )}
+          </TabsContent>
+
+          {/* ============ ABA: FINANCEIRO (GERENTE+) ============ */}
+          <TabsContent value="financeiro" className="space-y-6 mt-6">
+            {/* Resumo do plano */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Plano Atual
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Mensalidade</p>
+                  <p className="font-medium">Padrão</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Valor</p>
+                  <p className="font-medium">{formatCurrency(150)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Início</p>
+                  <p className="font-medium">{formatDate(aluno.dataMatricula)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Próx. Vencimento</p>
+                  <p className="font-medium">{formatDate(aluno.proximoVencimento)}</p>
+                </div>
+              </CardContent>
+              {onRegistrarPagamento &&
+                (aluno.status === "ativo" || aluno.status === "inadimplente") && (
+                  <CardContent className="pt-0">
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => onRegistrarPagamento(aluno)}
+                    >
+                      <CheckCircle className="mr-1.5 h-4 w-4" />
+                      Registrar Pagamento
+                    </Button>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Renova o vencimento por 1 mês e atualiza o status para
+                      Ativo automaticamente.
+                    </p>
+                  </CardContent>
+                )}
+            </Card>
+
+            {/* Histórico de pagamentos */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Histórico de Pagamentos
+              </h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Método</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagamentos.map((pagamento) => {
+                    const statusConfig = getStatusPagamentoConfig(pagamento.status);
+                    const StatusIcon = statusConfig.icon;
+                    
+                    return (
+                      <TableRow key={pagamento.id}>
+                        <TableCell>{formatDate(pagamento.data)}</TableCell>
+                        <TableCell>{formatCurrency(pagamento.valor)}</TableCell>
+                        <TableCell>
+                          <div className={`flex items-center gap-1.5 ${statusConfig.className}`}>
+                            <StatusIcon className="h-4 w-4" />
+                            <span className="capitalize">{pagamento.status}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {getMetodoPagamentoLabel(pagamento.metodoPagamento)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </TabsContent>
 
           {/* ============ ABA: TREINOS ============ */}

@@ -39,7 +39,9 @@ import {
   Aluno,
   FiltrosAluno,
   NovoAlunoData,
+  MENSALIDADE_PADRAO,
   recalcularStatusAlunos,
+  registrarPagamentoAluno,
 } from "@/types/aluno";
 
 // ============ DADOS MOCK ============
@@ -354,6 +356,23 @@ export default function AlunosPage() {
   }, []);
 
   /**
+   * Registra o pagamento do aluno: avança o próximo vencimento em 1 mês
+   * e atualiza o status automaticamente para "ativo".
+   * TODO: Chamar API para persistir o pagamento.
+   */
+  const handleRegistrarPagamento = useCallback((aluno: Aluno) => {
+    setAlunos((prev) =>
+      prev.map((a) => (a.id === aluno.id ? registrarPagamentoAluno(a) : a))
+    );
+    setAlunoSelecionado((prev) =>
+      prev && prev.id === aluno.id ? registrarPagamentoAluno(prev) : prev
+    );
+    toast.success(`Pagamento registrado para ${aluno.nome}`, {
+      description: "Status atualizado para Ativo e vencimento renovado por 1 mês.",
+    });
+  }, []);
+
+  /**
    * Suspende todos os alunos selecionados (ação em lote).
    * TODO: Chamar API em lote.
    */
@@ -423,7 +442,12 @@ export default function AlunosPage() {
     setAlunos((prev) => [novoAluno, ...prev]);
     setPaginaAtual(1);
 
-    toast.success(`${data.nome} matriculado(a) com sucesso!`);
+    const metodoPagamentoLabel =
+      data.metodoPagamento === "pix" ? "PIX" : "Dinheiro";
+
+    toast.success(`${data.nome} matriculado(a) com sucesso!`, {
+      description: `1º mês: R$ ${MENSALIDADE_PADRAO.primeiroMes.toFixed(2).replace(".", ",")} via ${metodoPagamentoLabel}. A partir do 2º mês: R$ ${MENSALIDADE_PADRAO.mensalRecorrente.toFixed(2).replace(".", ",")}/mês.`,
+    });
   }, []);
 
   // ============ RENDER ============
@@ -521,6 +545,7 @@ export default function AlunosPage() {
         aluno={alunoSelecionado}
         open={fichaAberta}
         onOpenChange={setFichaAberta}
+        onRegistrarPagamento={handleRegistrarPagamento}
       />
 
       {/* ============ MODAL NOVO ALUNO ============ */}
