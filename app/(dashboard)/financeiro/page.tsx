@@ -95,6 +95,7 @@ interface Lancamento {
   categoria: Categoria;
   formaPagamento: FormaPagamento;
   criadoEm: string;
+  emailAluno?: string;
 }
 
 // ============ CONSTANTES ============
@@ -238,7 +239,7 @@ function ModalVisualizacao({
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="flex items-start gap-3">
-            <span className={cn("mt-0.5 rounded-md p-2", cat.badgeClass.replace("text-", "bg-").replace("bg-", "bg-opacity-10 text-") )}>
+            <span className={cn("mt-0.5 rounded-md p-2", cat.badgeClass.replace("text-", "bg-").replace("bg-", "bg-opacity-10 text-"))}>
               <Icon className="h-5 w-5" />
             </span>
             <div>
@@ -568,13 +569,13 @@ export default function FinanceiroPage() {
       prev.map((l) =>
         l.id === lancamentoEditando.id
           ? {
-              ...l,
-              descricao: formEdicao.descricao.trim(),
-              valor: parseMoeda(formEdicao.valor),
-              data: formEdicao.data,
-              categoria: formEdicao.categoria as Categoria,
-              formaPagamento: formEdicao.formaPagamento as FormaPagamento,
-            }
+            ...l,
+            descricao: formEdicao.descricao.trim(),
+            valor: parseMoeda(formEdicao.valor),
+            data: formEdicao.data,
+            categoria: formEdicao.categoria as Categoria,
+            formaPagamento: formEdicao.formaPagamento as FormaPagamento,
+          }
           : l
       )
     );
