@@ -30,9 +30,7 @@ import {
   Menu,
   Sun,
   Moon,
-  ShieldCheck,
 } from "lucide-react";
-import { toast } from "sonner";
 import { cn, getInitials } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,12 +39,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -59,7 +52,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import { NotificationsMenu } from "@/components/layout/notifications-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { UserRole } from "@/types/auth";
 
 /**
  * Mapeamento de rotas para labels legíveis.
@@ -123,7 +115,7 @@ interface TopbarProps {
 
 export function Topbar({ onMenuClick }: TopbarProps) {
   const pathname = usePathname();
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
 
   /**
@@ -171,14 +163,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   const breadcrumbs = generateBreadcrumbs();
   const userInitials = user ? getInitials(user.name) : "??";
-
-  /** Troca de role (demo) com feedback. */
-  const handleSwitchRole = (role: string) => {
-    switchRole(role as UserRole);
-    toast.info(`Visualizando como ${role}`, {
-      description: "Troca de papel apenas para demonstração.",
-    });
-  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b border-border bg-background/80 px-4 backdrop-blur-md md:px-6">
@@ -297,26 +281,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 Meu Perfil
               </Link>
             </DropdownMenuItem>
-
-            {/* Troca de role - APENAS DEMONSTRAÇÃO (sem backend) */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <ShieldCheck className="mr-2 h-4 w-4" />
-                Visualizar como
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuRadioGroup
-                  value={user?.role}
-                  onValueChange={handleSwitchRole}
-                >
-                  {Object.values(UserRole).map((role) => (
-                    <DropdownMenuRadioItem key={role} value={role}>
-                      {role}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
 
             <DropdownMenuSeparator />
 
