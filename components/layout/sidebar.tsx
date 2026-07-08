@@ -26,6 +26,7 @@ import {
   LayoutDashboard,
   Users,
   DollarSign,
+  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -45,13 +46,12 @@ import type { NavItem } from "@/types/navigation";
  *
  * TIP: Para adicionar novos itens:
  * 1. Adicione o item na seção adequada
- * 2. Defina minLevel se precisar de permissão específica
+ * 2. Defina `recurso` se a área for controlada pelo ADMIN em Configurações
  * 3. O RoleGate cuida do resto automaticamente
  *
- * NÍVEIS DE PERMISSÃO:
- * - Sem minLevel: visível para todos
- * - minLevel: 60 = gerente ou superior
- * - minLevel: 80 = apenas admin
+ * Sem `recurso`: item visível para todos os logados. Com `recurso`: some da
+ * tela se o ADMIN restringir aquela área para o papel do usuário atual (ver
+ * lib/route-permissions.ts e a tela de Configurações).
  */
 const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
   {
@@ -59,7 +59,18 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Alunos", href: "/alunos", icon: Users },
-      { label: "Financeiro", href: "/financeiro", icon: DollarSign, minLevel: 60 },
+      { label: "Financeiro", href: "/financeiro", icon: DollarSign, recurso: "financeiro" },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      {
+        label: "Configurações",
+        href: "/configuracoes",
+        icon: Settings,
+        recurso: "configuracoes",
+      },
     ],
   },
 ];
@@ -164,9 +175,9 @@ export function SidebarContent({ collapsed = false, onNavigate }: SidebarContent
                 );
 
                 // Se item requer permissão, envolve com RoleGate
-                if (item.minLevel !== undefined) {
+                if (item.recurso !== undefined) {
                   return (
-                    <RoleGate key={item.href} minLevel={item.minLevel}>
+                    <RoleGate key={item.href} recurso={item.recurso}>
                       {menuItem}
                     </RoleGate>
                   );

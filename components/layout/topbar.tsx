@@ -11,7 +11,7 @@
  * - Indicador online/offline
  * - Toggle de tema claro/escuro
  * - Notificações com badge
- * - Avatar com dropdown (perfil, troca de role p/ demo, logout)
+ * - Avatar com dropdown (perfil, logout)
  *
  * TIP: O breadcrumb é gerado automaticamente baseado na rota atual.
  * Para customizar labels, ajuste o mapeamento em ROUTE_LABELS.

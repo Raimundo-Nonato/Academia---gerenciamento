@@ -5,15 +5,8 @@
  * PÁGINA DE LOGIN
  * ============================================================================
  *
- * Porta de entrada do sistema. Validação local (sem backend) para fins
- * de teste, usando a conta:
- *
- *   Usuário: Luciano
- *   Senha:   123
- *
- * A senha pode ser alterada em "Meu Perfil" (válida apenas na sessão atual).
- *
- * TODO: Integrar com backend real de autenticação.
+ * Porta de entrada do sistema. Login real contra o backend (e-mail + senha),
+ * com sessão persistida em cookie — sobrevive a recarregar a página.
  */
 
 import { useState, useEffect, type FormEvent } from "react";
@@ -29,7 +22,7 @@ export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -46,15 +39,12 @@ export default function LoginPage() {
     setError("");
     setIsSubmitting(true);
 
-    // Pequeno delay para simular requisição
-    await new Promise((r) => setTimeout(r, 400));
-
-    const success = login(username.trim(), password);
+    const success = await login(email.trim(), password);
 
     if (success) {
       router.replace("/dashboard");
     } else {
-      setError("Usuário ou senha inválidos.");
+      setError("E-mail ou senha inválidos.");
       setIsSubmitting(false);
     }
   };
@@ -87,13 +77,14 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="login-username">Usuário</Label>
+              <Label htmlFor="login-email">E-mail</Label>
               <Input
-                id="login-username"
-                autoComplete="username"
-                placeholder="Luciano"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                placeholder="voce@wenvefit.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -137,11 +128,6 @@ export default function LoginPage() {
               {isSubmitting ? "Entrando..." : "Entrar"}
             </Button>
           </form>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            Conta de testes: <span className="font-medium">Luciano</span> / senha{" "}
-            <span className="font-medium">123</span>
-          </p>
         </CardContent>
       </Card>
     </div>

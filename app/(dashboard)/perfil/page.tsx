@@ -106,9 +106,8 @@ export default function PerfilPage() {
     }
 
     setIsChangingPassword(true);
-    await new Promise((r) => setTimeout(r, 400)); // Simula API
 
-    const success = changePassword(senhaAtual, novaSenha);
+    const success = await changePassword(senhaAtual, novaSenha);
     setIsChangingPassword(false);
 
     if (!success) {
@@ -116,9 +115,7 @@ export default function PerfilPage() {
       return;
     }
 
-    toast.success("Senha alterada com sucesso!", {
-      description: "A nova senha é válida durante esta sessão.",
-    });
+    toast.success("Senha alterada com sucesso!");
     resetPasswordForm();
     setIsPasswordDialogOpen(false);
   };
