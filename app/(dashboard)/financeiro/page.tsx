@@ -16,9 +16,8 @@
  * - Lista de lançamentos com edição e exclusão
  */
 
-import { useState, useMemo } from "react";
-import { format, subMonths, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
 import {
   DollarSign,
   TrendingUp,
@@ -81,21 +80,7 @@ import { Button } from "@/components/ui/button";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { useAlunos } from "@/contexts/alunos-context";
 import { toast } from "sonner";
-
-// ============ TIPOS ============
-
-type Categoria = "mensalidade" | "despesa" | "estorno";
-type FormaPagamento = "pix" | "dinheiro";
-
-interface Lancamento {
-  id: string;
-  descricao: string;
-  valor: number;
-  data: string;
-  categoria: Categoria;
-  formaPagamento: FormaPagamento;
-  criadoEm: string;
-}
+import type { Categoria, FormaPagamento, Lancamento, ResumoFinanceiro } from "@/types/lancamento";
 
 // ============ CONSTANTES ============
 
@@ -137,10 +122,6 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 // ============ HELPERS ============
-
-function gerarId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 function parseMoeda(valor: string): number {
   // Suporta "R$ 1.234,56", "1.234,56", "1234.56", "1234,56"
@@ -431,9 +412,18 @@ function ModalConfirmacao({
 
 // ============ PÁGINA PRINCIPAL ============
 
+const RESUMO_VAZIO: ResumoFinanceiro = {
+  totalMensalidades: 0,
+  totalDespesas: 0,
+  totalEstornos: 0,
+  saldo: 0,
+  evolucaoFinanceira: [],
+};
+
 export default function FinanceiroPage() {
   const { buscarAlunoPorEmail, registrarPagamento } = useAlunos();
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
+  const [resumo, setResumo] = useState<ResumoFinanceiro>(RESUMO_VAZIO);
 
   // Modal: novo lançamento
   const [modalNovo, setModalNovo] = useState(false);
@@ -451,50 +441,25 @@ export default function FinanceiroPage() {
   // Modal: exclusão
   const [idExcluindo, setIdExcluindo] = useState<string | null>(null);
 
-  // ============ CÁLCULOS ============
+  // ============ DADOS (servidor) ============
 
-  const resumo = useMemo(() => {
-    let totalMensalidades = 0;
-    let totalDespesas = 0;
-    let totalEstornos = 0;
-
-    for (const l of lancamentos) {
-      if (l.categoria === "mensalidade") totalMensalidades += l.valor;
-      else if (l.categoria === "despesa") totalDespesas += l.valor;
-      else if (l.categoria === "estorno") totalEstornos += l.valor;
+  const carregarDados = useCallback(async () => {
+    const [resLancamentos, resKpis] = await Promise.all([
+      fetch("/api/lancamentos"),
+      fetch("/api/lancamentos/kpis"),
+    ]);
+    if (resLancamentos.ok) {
+      const { lancamentos } = await resLancamentos.json();
+      setLancamentos(lancamentos);
     }
+    if (resKpis.ok) {
+      setResumo(await resKpis.json());
+    }
+  }, []);
 
-    // Estornos reduzem as receitas (mensalidades)
-    const saldo = totalMensalidades - totalEstornos - totalDespesas;
-
-    return { totalMensalidades, totalDespesas, totalEstornos, saldo };
-  }, [lancamentos]);
-
-  // Gráfico: últimos 6 meses
-  const evolucaoFinanceira = useMemo(() => {
-    return Array.from({ length: 6 }, (_, index) => {
-      const mes = subMonths(new Date(), 5 - index);
-      const inicio = startOfMonth(mes);
-      const fim = endOfMonth(mes);
-
-      let receitas = 0;
-      let despesas = 0;
-
-      for (const l of lancamentos) {
-        const data = parseISO(l.data);
-        if (!isWithinInterval(data, { start: inicio, end: fim })) continue;
-        if (l.categoria === "mensalidade") receitas += l.valor;
-        else if (l.categoria === "estorno") receitas -= l.valor; // estorno reduz receita
-        else if (l.categoria === "despesa") despesas += l.valor;
-      }
-
-      return {
-        mes: format(mes, "MMM", { locale: ptBR }),
-        receitas: Math.max(0, receitas),
-        despesas,
-      };
-    });
-  }, [lancamentos]);
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
 
   // ============ HANDLERS ============
 
@@ -511,11 +476,13 @@ export default function FinanceiroPage() {
     return "";
   }
 
-  function handleCriar() {
+  async function handleCriar() {
     const erro = validarForm(formNovo);
     if (erro) { setErroNovo(erro); return; }
 
-    // Integração com módulo de Alunos: valida e atualiza ao registrar mensalidade
+    // Mensalidade: a rota de pagamento do aluno já cria o lançamento no
+    // servidor (numa transação só com a atualização do vencimento) —
+    // aqui só disparamos ela, sem duplicar o lançamento.
     if (formNovo.categoria === "mensalidade") {
       const aluno = buscarAlunoPorEmail(formNovo.emailAluno);
       if (!aluno) {
@@ -523,25 +490,39 @@ export default function FinanceiroPage() {
         return;
       }
       const statusAnterior = aluno.status;
-      registrarPagamento(formNovo.emailAluno);
+      const atualizado = await registrarPagamento(formNovo.emailAluno, {
+        valor: parseMoeda(formNovo.valor),
+        descricao: formNovo.descricao.trim(),
+        formaPagamento: formNovo.formaPagamento as FormaPagamento,
+      });
+      if (!atualizado) {
+        setErroNovo("Não foi possível registrar a mensalidade. Tente novamente.");
+        return;
+      }
       if (statusAnterior === "inadimplente") {
         toast.success(`${aluno.nome} atualizado para Ativo`, {
           description: "O status inadimplente foi removido após o registro da mensalidade.",
         });
       }
+    } else {
+      const res = await fetch("/api/lancamentos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          descricao: formNovo.descricao.trim(),
+          valor: parseMoeda(formNovo.valor),
+          data: formNovo.data,
+          categoria: formNovo.categoria,
+          formaPagamento: formNovo.formaPagamento,
+        }),
+      });
+      if (!res.ok) {
+        setErroNovo("Não foi possível salvar o lançamento. Tente novamente.");
+        return;
+      }
     }
 
-    const novo: Lancamento = {
-      id: gerarId(),
-      descricao: formNovo.descricao.trim(),
-      valor: parseMoeda(formNovo.valor),
-      data: formNovo.data,
-      categoria: formNovo.categoria as Categoria,
-      formaPagamento: formNovo.formaPagamento as FormaPagamento,
-      criadoEm: new Date().toISOString(),
-    };
-
-    setLancamentos((prev) => [novo, ...prev]);
+    await carregarDados();
     setModalNovo(false);
     setFormNovo(FORM_VAZIO);
     setErroNovo("");
@@ -560,31 +541,40 @@ export default function FinanceiroPage() {
     setErroEdicao("");
   }
 
-  function handleSalvarEdicao() {
+  async function handleSalvarEdicao() {
     if (!lancamentoEditando) return;
     const erro = validarForm(formEdicao);
     if (erro) { setErroEdicao(erro); return; }
 
-    setLancamentos((prev) =>
-      prev.map((l) =>
-        l.id === lancamentoEditando.id
-          ? {
-              ...l,
-              descricao: formEdicao.descricao.trim(),
-              valor: parseMoeda(formEdicao.valor),
-              data: formEdicao.data,
-              categoria: formEdicao.categoria as Categoria,
-              formaPagamento: formEdicao.formaPagamento as FormaPagamento,
-            }
-          : l
-      )
-    );
+    const res = await fetch(`/api/lancamentos/${lancamentoEditando.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        descricao: formEdicao.descricao.trim(),
+        valor: parseMoeda(formEdicao.valor),
+        data: formEdicao.data,
+        categoria: formEdicao.categoria,
+        formaPagamento: formEdicao.formaPagamento,
+      }),
+    });
+
+    if (!res.ok) {
+      setErroEdicao("Não foi possível salvar as alterações. Tente novamente.");
+      return;
+    }
+
+    await carregarDados();
     setLancamentoEditando(null);
   }
 
-  function handleExcluir() {
+  async function handleExcluir() {
     if (!idExcluindo) return;
-    setLancamentos((prev) => prev.filter((l) => l.id !== idExcluindo));
+    const res = await fetch(`/api/lancamentos/${idExcluindo}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Não foi possível excluir. Tente novamente.");
+      return;
+    }
+    await carregarDados();
     setIdExcluindo(null);
   }
 
@@ -648,7 +638,7 @@ export default function FinanceiroPage() {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-52 sm:h-72 w-full">
-            <AreaChart data={evolucaoFinanceira} margin={{ left: 12 }}>
+            <AreaChart data={resumo.evolucaoFinanceira} margin={{ left: 12 }}>
               <defs>
                 <linearGradient id="fillReceitas" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.5} />

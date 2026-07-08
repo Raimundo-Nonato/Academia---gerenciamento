@@ -9,6 +9,9 @@ __v0_jsx-dev-runtime.ts
 # Environment variables
 .env*.local
 
+# Banco de dados local (nunca deve ir para o Git)
+/data
+
 # Common ignores
 node_modules
 .next/

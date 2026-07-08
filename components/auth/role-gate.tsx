@@ -4,88 +4,78 @@
  * ============================================================================
  * COMPONENTE ROLE GATE
  * ============================================================================
- * 
- * Controle de acesso baseado em roles.
- * Remove elementos do DOM se o usuário não tem permissão suficiente.
- * 
- * IMPORTANTE: Este componente NÃO esconde com CSS - ele remove do DOM.
- * Isso evita vazamento de informações sensíveis no HTML.
- * 
+ *
+ * Controle de acesso por área (recurso). Remove elementos do DOM se o
+ * usuário não tem permissão — não esconde só com CSS, evitando vazar dado
+ * sensível no HTML.
+ *
+ * IMPORTANTE: isto é conforto de UX (esconder botão na hora, sem esperar o
+ * servidor). A permissão de verdade é sempre conferida de novo no servidor
+ * (lib/auth/guard.ts) — mesmo que alguém force essa parte do cliente.
+ *
  * USO:
  * ```tsx
- * <RoleGate minLevel={60}>
+ * <RoleGate recurso="financeiro">
  *   <MenuFinanceiro />
  * </RoleGate>
  * ```
- * 
- * TIP: Use os níveis definidos em ROLE_LEVELS (auth.ts):
- * - 30: RECEPCIONISTA
- * - 60: GERENTE
- * - 80+: ADMIN
  */
 
 import type { ReactNode } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { ROLE_LEVELS } from "@/types/auth";
 
 interface RoleGateProps {
   /** Conteúdo a ser renderizado se autorizado */
   children: ReactNode;
-  /** Nível mínimo de permissão necessário */
-  minLevel: number;
+  /** Área exigida (ver lib/route-permissions.ts) */
+  recurso: string;
   /** Conteúdo alternativo se não autorizado (opcional) */
   fallback?: ReactNode;
 }
 
 /**
- * Componente que condiciona renderização baseada no nível do usuário.
- * 
- * @param minLevel - Nível numérico mínimo necessário
- * @param children - Conteúdo renderizado se autorizado
- * @param fallback - Conteúdo alternativo (opcional, padrão: null)
- * 
- * COMPORTAMENTO:
- * - Se usuário não autenticado: retorna fallback
- * - Se nível do usuário >= minLevel: renderiza children
- * - Caso contrário: retorna fallback
+ * Componente que condiciona renderização com base no que o ADMIN liberou
+ * para o papel do usuário logado.
  */
-export function RoleGate({ 
-  children, 
-  minLevel, 
-  fallback = null 
-}: RoleGateProps) {
-  const { user } = useAuth();
+export function RoleGate({ children, recurso, fallback = null }: RoleGateProps) {
+  const { user, permissions } = useAuth();
 
-  // Sem usuário = sem permissão
   if (!user) {
     return fallback;
   }
 
-  // Obtém o nível numérico do role do usuário
-  const userLevel = ROLE_LEVELS[user.role] ?? 0;
+  // "configuracoes" nunca aparece no mapa de permissões (não é configurável)
+  // — precisa da mesma trava explícita usada no AccessGuard: só ADMIN passa.
+  if (recurso === "configuracoes") {
+    return user.role === "ADMIN" ? children : fallback;
+  }
 
-  // Verifica se tem permissão suficiente
-  if (userLevel >= minLevel) {
+  // ADMIN sempre tem acesso total, não passa pela tabela de permissões.
+  if (user.role === "ADMIN") {
     return children;
   }
 
-  // Sem permissão - retorna fallback (null por padrão)
-  return fallback;
+  if (permissions[recurso] === false) {
+    return fallback;
+  }
+
+  return children;
 }
 
 /**
  * Hook utilitário para verificar permissões programaticamente.
- * 
+ *
  * USO:
  * ```tsx
- * const canAccessFinance = useHasPermission(60);
+ * const podeAcessarFinanceiro = useHasPermission("financeiro");
  * ```
  */
-export function useHasPermission(minLevel: number): boolean {
-  const { user } = useAuth();
-  
+export function useHasPermission(recurso: string): boolean {
+  const { user, permissions } = useAuth();
+
   if (!user) return false;
-  
-  const userLevel = ROLE_LEVELS[user.role] ?? 0;
-  return userLevel >= minLevel;
+  if (recurso === "configuracoes") return user.role === "ADMIN";
+  if (user.role === "ADMIN") return true;
+
+  return permissions[recurso] !== false;
 }

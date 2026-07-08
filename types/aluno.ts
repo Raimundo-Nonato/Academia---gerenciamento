@@ -66,12 +66,12 @@ export interface Aluno {
  * SEGURANÇA: Só buscar esses dados quando realmente necessário.
  */
 export interface AlunoDetalhes extends Aluno {
-  /** CPF - SEMPRE mascarar exceto para ADMIN */
-  cpf: string;
+  /** CPF - SEMPRE mascarar exceto para ADMIN. Opcional: não é coletado no cadastro rápido. */
+  cpf?: string;
   /** Data de nascimento ISO */
   dataNascimento: string;
-  /** Endereço completo */
-  endereco: {
+  /** Endereço completo. Opcional: não é coletado no cadastro rápido. */
+  endereco?: {
     logradouro: string;
     numero: string;
     complemento?: string;

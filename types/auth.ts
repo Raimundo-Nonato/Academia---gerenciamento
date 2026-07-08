@@ -61,29 +61,27 @@ export interface User {
 export interface AuthContextType {
   /** Usuário logado ou null se não autenticado */
   user: User | null;
+  /**
+   * Mapa "recurso -> pode acessar?" para o usuário logado (vem do servidor).
+   * ADMIN sempre pode tudo, mesmo que um recurso não apareça aqui.
+   */
+  permissions: Record<string, boolean>;
   /** Indica se está carregando dados de autenticação */
   isLoading: boolean;
   /** Indica se há uma sessão ativa */
   isAuthenticated: boolean;
   /**
-   * Realiza login com usuário/senha (validação local, apenas para testes).
+   * Realiza login com e-mail/senha contra o servidor.
    * @returns true se as credenciais forem válidas
    */
-  login: (username: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   /** Função para logout */
-  logout: () => void;
+  logout: () => Promise<void>;
   /**
-   * Altera a senha da conta de teste (válida apenas durante a sessão).
+   * Altera a senha do usuário logado.
    * @returns true se a senha atual informada estiver correta
    */
-  changePassword: (currentPassword: string, newPassword: string) => boolean;
-  /**
-   * Troca o role do usuário logado.
-   * APENAS PARA DEMONSTRAÇÃO enquanto não há backend — permite testar
-   * as permissões (RoleGate) sem trocar de conta.
-   * TODO: Remover quando a autenticação real for integrada.
-   */
-  switchRole: (role: UserRole) => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
 }
 
 /**

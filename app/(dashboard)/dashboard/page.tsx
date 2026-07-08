@@ -239,7 +239,7 @@ export default function DashboardPage() {
         />
 
         {/* Métricas financeiras - apenas gerente+ */}
-        <RoleGate minLevel={60}>
+        <RoleGate recurso="financeiro">
           <MetricCard
             title="Receita Mensal"
             value={formatCurrency(45230)}
@@ -269,7 +269,7 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
 
         {/* Resumo financeiro - apenas gerente+ */}
-        <RoleGate minLevel={60}>
+        <RoleGate recurso="financeiro">
           <Card className="rise" style={{ animationDelay: "420ms" }}>
             <CardHeader>
               <CardTitle>Resumo Financeiro</CardTitle>

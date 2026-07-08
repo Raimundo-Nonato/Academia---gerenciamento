@@ -5,16 +5,19 @@
  * COMPONENTE ACCESS GUARD
  * ============================================================================
  *
- * Protege ROTAS inteiras com base no nível do usuário.
+ * Protege ROTAS inteiras com base no que o ADMIN liberou para o papel do
+ * usuário logado.
  *
  * Diferença para o RoleGate:
  * - RoleGate esconde TRECHOS de UI (seções, menus) dentro de uma página.
  * - AccessGuard bloqueia a PÁGINA inteira quando acessada por URL direta.
  *
- * Sem ele, um recepcionista poderia abrir /financeiro pela URL e ver tudo,
- * já que a sidebar só esconde o link — não impede a navegação.
+ * Sem ele, alguém poderia abrir /financeiro pela URL e ver tudo, já que a
+ * sidebar só esconde o link — não impede a navegação.
  *
- * O nível exigido por rota vem de lib/route-permissions.ts.
+ * O recurso de cada rota vem de lib/route-permissions.ts. Assim como o
+ * RoleGate, isto é só conforto de UX: o servidor confere de novo (e de
+ * verdade) em cada chamada de API, via lib/auth/guard.ts.
  */
 
 import type { ReactNode } from "react";
@@ -23,13 +26,12 @@ import { usePathname } from "next/navigation";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
-import { ROLE_LEVELS } from "@/types/auth";
-import { getRouteMinLevel } from "@/lib/route-permissions";
+import { getRouteResource } from "@/lib/route-permissions";
 
 /**
  * Tela exibida quando o usuário não tem permissão para a rota atual.
  */
-function AccessDenied({ minLevel }: { minLevel: number }) {
+function AccessDenied() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
       <div className="mb-5 rounded-full bg-destructive/10 p-5">
@@ -39,10 +41,8 @@ function AccessDenied({ minLevel }: { minLevel: number }) {
         Acesso restrito
       </h1>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">
-        Você não tem permissão para acessar esta área. É necessário um nível de
-        acesso igual ou superior a{" "}
-        <span className="font-semibold text-foreground">{minLevel}</span>. Fale
-        com um administrador caso precise de acesso.
+        Você não tem permissão para acessar esta área. Fale com um
+        administrador caso precise de acesso.
       </p>
       <Button asChild className="mt-6">
         <Link href="/dashboard">
@@ -60,24 +60,32 @@ interface AccessGuardProps {
 
 /**
  * Envolve o conteúdo das páginas e decide se renderiza ou bloqueia,
- * comparando o nível do usuário com o exigido pela rota atual.
+ * consultando o que o ADMIN liberou para o papel do usuário atual.
  */
 export function AccessGuard({ children }: AccessGuardProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, permissions } = useAuth();
 
-  const minLevel = getRouteMinLevel(pathname);
+  const recurso = getRouteResource(pathname);
 
-  // Rota pública: libera direto.
-  if (minLevel === 0) {
+  // Rota pública (não listada): libera direto para qualquer logado.
+  if (recurso === null) {
     return <>{children}</>;
   }
 
-  const userLevel = user ? ROLE_LEVELS[user.role] ?? 0 : 0;
+  // "configuracoes" é sempre exclusivo do ADMIN — trava também aqui no
+  // cliente, além do servidor (lib/auth/guard.ts).
+  if (recurso === "configuracoes") {
+    return user?.role === "ADMIN" ? <>{children}</> : <AccessDenied />;
+  }
 
-  if (userLevel >= minLevel) {
+  if (user?.role === "ADMIN") {
     return <>{children}</>;
   }
 
-  return <AccessDenied minLevel={minLevel} />;
+  if (permissions[recurso] === false) {
+    return <AccessDenied />;
+  }
+
+  return <>{children}</>;
 }

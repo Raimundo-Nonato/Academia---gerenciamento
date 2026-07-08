@@ -22,7 +22,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { addMonths, format } from "date-fns";
+import { format } from "date-fns";
 import { useAlunos } from "@/contexts/alunos-context";
 import { Plus, Download, UserX, X } from "lucide-react";
 import { toast } from "sonner";
@@ -207,31 +207,45 @@ export default function AlunosPage() {
   }, []);
 
   /**
-   * Suspende um aluno — atualiza o status na lista.
-   * TODO: Chamar API para persistir mudança.
+   * Suspende um aluno — persiste no servidor e atualiza a lista local.
    */
-  const handleSuspender = useCallback((aluno: Aluno) => {
-    setAlunos((prev) =>
-      prev.map((a) => (a.id === aluno.id ? { ...a, status: "suspenso" } : a))
-    );
-    toast.success(`${aluno.nome} foi suspenso(a)`, {
-      description: "O acesso à academia ficará bloqueado até a reativação.",
+  const suspenderNoServidor = useCallback(async (id: string) => {
+    const res = await fetch(`/api/alunos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "suspenso" }),
     });
+    if (!res.ok) return null;
+    const { aluno } = await res.json();
+    return aluno as Aluno;
   }, []);
+
+  const handleSuspender = useCallback(
+    async (aluno: Aluno) => {
+      const atualizado = await suspenderNoServidor(aluno.id);
+      if (!atualizado) {
+        toast.error("Não foi possível suspender. Tente novamente.");
+        return;
+      }
+      setAlunos((prev) => prev.map((a) => (a.id === atualizado.id ? atualizado : a)));
+      toast.success(`${aluno.nome} foi suspenso(a)`, {
+        description: "O acesso à academia ficará bloqueado até a reativação.",
+      });
+    },
+    [suspenderNoServidor]
+  );
 
   /**
    * Suspende todos os alunos selecionados (ação em lote).
-   * TODO: Chamar API em lote.
    */
-  const handleSuspenderSelecionados = useCallback(() => {
+  const handleSuspenderSelecionados = useCallback(async () => {
+    const atualizados = await Promise.all(selectedIds.map(suspenderNoServidor));
     setAlunos((prev) =>
-      prev.map((a) =>
-        selectedIds.includes(a.id) ? { ...a, status: "suspenso" } : a
-      )
+      prev.map((a) => atualizados.find((u) => u?.id === a.id) ?? a)
     );
     toast.success(`${selectedIds.length} aluno(s) suspenso(s)`);
     setSelectedIds([]);
-  }, [selectedIds]);
+  }, [selectedIds, suspenderNoServidor]);
 
   /**
    * Exporta os alunos selecionados (ou todos os filtrados) para CSV.
@@ -259,32 +273,21 @@ export default function AlunosPage() {
   }, []);
 
   /**
-   * Salva novo aluno — entra no topo da lista.
-   * Registra método de pagamento e aplica mensalidade padrão.
-   * TODO: Chamar API POST /alunos.
+   * Salva novo aluno — cadastra no servidor e entra no topo da lista.
    */
   const handleSaveNovoAluno = useCallback(async (data: NovoAlunoData) => {
-    // Simula delay de API
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    const res = await fetch("/api/alunos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
 
-    const personal = MOCK_PERSONAIS.find((p) => p.id === data.personalId);
-    // Próximo vencimento: 1 mês após o início (mensalidade padrão)
-    const vencimento = addMonths(
-      new Date(`${data.dataInicio}T12:00:00`),
-      1
-    );
+    if (!res.ok) {
+      toast.error("Não foi possível cadastrar o aluno. Tente novamente.");
+      return;
+    }
 
-    const novoAluno: Aluno = {
-      id: crypto.randomUUID(),
-      nome: data.nome,
-      email: data.email,
-      telefone: data.telefone || "",
-      dataMatricula: data.dataInicio,
-      status: "ativo",
-      proximoVencimento: format(vencimento, "yyyy-MM-dd"),
-      personalId: data.personalId ?? null,
-      personalNome: personal?.nome ?? null,
-    };
+    const { aluno: novoAluno } = await res.json();
 
     setAlunos((prev) => [novoAluno, ...prev]);
     setPaginaAtual(1);

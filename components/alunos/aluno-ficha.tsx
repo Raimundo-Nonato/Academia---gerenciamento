@@ -21,7 +21,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -75,37 +75,7 @@ interface AlunoFichaProps {
 }
 
 // ============ DADOS MOCK ============
-// TODO: Substituir por chamadas à API
-
-const MOCK_DETALHES: AlunoDetalhes = {
-  id: "1",
-  nome: "João Silva",
-  email: "joao@email.com",
-  telefone: "(11) 99999-1111",
-  dataMatricula: "2023-06-15",
-  plano: "Mensal",
-  status: "ativo",
-  proximoVencimento: "2024-02-15",
-  personalId: "p1",
-  personalNome: "Carlos Trainer",
-  cpf: "123.456.789-00",
-  dataNascimento: "1990-05-20",
-  endereco: {
-    logradouro: "Rua das Flores",
-    numero: "123",
-    complemento: "Apto 45",
-    bairro: "Centro",
-    cidade: "São Paulo",
-    estado: "SP",
-    cep: "01234-567",
-  },
-  observacoesMedicas: "Histórico de lesão no joelho esquerdo. Evitar exercícios de alto impacto.",
-  contatoEmergencia: {
-    nome: "Maria Silva",
-    telefone: "(11) 98888-0000",
-    parentesco: "Mãe",
-  },
-};
+// TODO: Substituir por chamadas à API (fichas de treino — fase futura)
 
 const MOCK_FICHAS: FichaTreino[] = [
   {
@@ -237,10 +207,27 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
   const [showCPF, setShowCPF] = useState(false);
   const [fichas, setFichas] = useState<FichaTreino[]>(MOCK_FICHAS);
   const [fichaAbertaId, setFichaAbertaId] = useState<string | null>(null);
+  const [detalhes, setDetalhes] = useState<AlunoDetalhes | null>(null);
 
-  // Usa dados mock enquanto API não está implementada
-  // TODO: Buscar detalhes completos via API quando aluno mudar
-  const detalhes = MOCK_DETALHES;
+  // Busca a ficha completa (com campos sensíveis já mascarados pelo
+  // servidor conforme o papel do usuário) sempre que o sheet abre para
+  // um aluno diferente.
+  useEffect(() => {
+    if (!aluno || !open) return;
+
+    let cancelado = false;
+    setDetalhes(null);
+
+    fetch(`/api/alunos/${aluno.id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelado && data) setDetalhes(data.aluno);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [aluno, open]);
 
   // Verifica se usuário é admin para ver CPF completo
   const isAdmin = user?.role === UserRole.ADMIN;
@@ -309,107 +296,124 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
 
           {/* ============ ABA: DADOS PESSOAIS ============ */}
           <TabsContent value="dados" className="space-y-6 mt-6">
-            {/* Informações de contato */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Contato</h3>
-              <div className="grid gap-3">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{aluno.email}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{aluno.telefone}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Nascimento: {formatDate(detalhes.dataNascimento)}</span>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* CPF com proteção */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Documentos</h3>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>CPF: {podeVerCPF ? detalhes.cpf : maskCPF(detalhes.cpf)}</span>
-                </div>
-                {/* Botão de revelar CPF só para admin */}
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowCPF(!showCPF)}
-                  >
-                    {showCPF ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Endereço */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Endereço</h3>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div className="text-sm">
-                  <p>
-                    {detalhes.endereco.logradouro}, {detalhes.endereco.numero}
-                    {detalhes.endereco.complemento && ` - ${detalhes.endereco.complemento}`}
-                  </p>
-                  <p>
-                    {detalhes.endereco.bairro}, {detalhes.endereco.cidade} - {detalhes.endereco.estado}
-                  </p>
-                  <p className="text-muted-foreground">CEP: {detalhes.endereco.cep}</p>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Observações médicas - DADO SENSÍVEL */}
-            {detalhes.observacoesMedicas && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    Observações Médicas
-                  </h3>
-                  <Badge variant="outline" className="text-amber-600 border-amber-600">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Dado Sensível
-                  </Badge>
-                </div>
-                <p className="text-sm bg-amber-50 dark:bg-amber-950/20 p-3 rounded-md border border-amber-200 dark:border-amber-900">
-                  {detalhes.observacoesMedicas}
-                </p>
-              </div>
-            )}
-
-            {/* Contato de emergência */}
-            {detalhes.contatoEmergencia && (
+            {!detalhes ? (
+              <p className="text-sm text-muted-foreground">Carregando...</p>
+            ) : (
               <>
-                <Separator />
+                {/* Informações de contato */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    Contato de Emergência
-                  </h3>
-                  <div className="text-sm">
-                    <p className="font-medium">{detalhes.contatoEmergencia.nome}</p>
-                    <p className="text-muted-foreground">
-                      {detalhes.contatoEmergencia.parentesco} • {detalhes.contatoEmergencia.telefone}
-                    </p>
+                  <h3 className="text-sm font-medium text-muted-foreground">Contato</h3>
+                  <div className="grid gap-3">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{aluno.email}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{aluno.telefone}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span>Nascimento: {formatDate(detalhes.dataNascimento)}</span>
+                    </div>
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* CPF com proteção */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">Documentos</h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        CPF:{" "}
+                        {!detalhes.cpf
+                          ? "Não informado"
+                          : podeVerCPF
+                            ? detalhes.cpf
+                            : maskCPF(detalhes.cpf)}
+                      </span>
+                    </div>
+                    {/* Botão de revelar CPF só para admin, quando há CPF cadastrado */}
+                    {isAdmin && detalhes.cpf && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowCPF(!showCPF)}
+                      >
+                        {showCPF ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Endereço — opcional: não é coletado no cadastro rápido */}
+                {detalhes.endereco && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-medium text-muted-foreground">Endereço</h3>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="text-sm">
+                          <p>
+                            {detalhes.endereco.logradouro}, {detalhes.endereco.numero}
+                            {detalhes.endereco.complemento && ` - ${detalhes.endereco.complemento}`}
+                          </p>
+                          <p>
+                            {detalhes.endereco.bairro}, {detalhes.endereco.cidade} - {detalhes.endereco.estado}
+                          </p>
+                          <p className="text-muted-foreground">CEP: {detalhes.endereco.cep}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Observações médicas - DADO SENSÍVEL */}
+                {detalhes.observacoesMedicas && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-medium text-muted-foreground">
+                          Observações Médicas
+                        </h3>
+                        <Badge variant="outline" className="text-amber-600 border-amber-600">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Dado Sensível
+                        </Badge>
+                      </div>
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950/20 p-3 rounded-md border border-amber-200 dark:border-amber-900">
+                        {detalhes.observacoesMedicas}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Contato de emergência */}
+                {detalhes.contatoEmergencia && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-medium text-muted-foreground">
+                        Contato de Emergência
+                      </h3>
+                      <div className="text-sm">
+                        <p className="font-medium">{detalhes.contatoEmergencia.nome}</p>
+                        <p className="text-muted-foreground">
+                          {detalhes.contatoEmergencia.parentesco} • {detalhes.contatoEmergencia.telefone}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </TabsContent>

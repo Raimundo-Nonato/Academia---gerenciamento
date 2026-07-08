@@ -15,17 +15,17 @@ import type { LucideIcon } from "lucide-react";
  * @property label - Texto exibido no menu
  * @property href - Rota de destino
  * @property icon - Componente de ícone Lucide
- * @property minLevel - Nível mínimo de permissão (opcional)
+ * @property recurso - Área controlada pela tela de Configurações (opcional)
  * @property badge - Texto ou número para badge (opcional)
- * 
- * TIP: Se minLevel não for definido, o item é visível para todos.
+ *
+ * TIP: Se recurso não for definido, o item é visível para todos os logados.
  */
 export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** Nível mínimo necessário para visualizar este item */
-  minLevel?: number;
+  /** Área (ver lib/route-permissions.ts) exigida para visualizar este item */
+  recurso?: string;
   /** Badge opcional (ex: contagem de notificações) */
   badge?: string | number;
 }
