@@ -47,15 +47,6 @@ import {
 // e são compartilhados com o módulo Financeiro.
 
 /**
- * Lista mock de personais para filtros e cadastro.
- */
-const MOCK_PERSONAIS = [
-  { id: "p1", nome: "Carlos Trainer" },
-  { id: "p2", nome: "Ana Personal" },
-  { id: "p3", nome: "Bruno Coach" },
-];
-
-/**
  * Configuração de paginação.
  * TIP: 25 itens é um bom balanço entre usabilidade e performance.
  */
@@ -153,12 +144,9 @@ export default function AlunosPage() {
       }
 
       // Filtro de personal
-      if (filtros.personalId) {
-        if (filtros.personalId === "sem_personal") {
-          if (aluno.personalId !== null) return false;
-        } else {
-          if (aluno.personalId !== filtros.personalId) return false;
-        }
+      if (filtros.temPersonal !== undefined) {
+        const temPersonal = !!aluno.personalNome;
+        if (temPersonal !== filtros.temPersonal) return false;
       }
 
       return true;
@@ -236,6 +224,34 @@ export default function AlunosPage() {
   );
 
   /**
+   * Cancela a matrícula de um aluno — persiste no servidor e atualiza a
+   * lista local. Diferente de suspender: é definitivo.
+   */
+  const cancelarNoServidor = useCallback(async (id: string) => {
+    const res = await fetch(`/api/alunos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelado" }),
+    });
+    if (!res.ok) return null;
+    const { aluno } = await res.json();
+    return aluno as Aluno;
+  }, []);
+
+  const handleCancelar = useCallback(
+    async (aluno: Aluno) => {
+      const atualizado = await cancelarNoServidor(aluno.id);
+      if (!atualizado) {
+        toast.error("Não foi possível cancelar a matrícula. Tente novamente.");
+        return;
+      }
+      setAlunos((prev) => prev.map((a) => (a.id === atualizado.id ? atualizado : a)));
+      toast.success(`Matrícula de ${aluno.nome} cancelada`);
+    },
+    [cancelarNoServidor]
+  );
+
+  /**
    * Suspende todos os alunos selecionados (ação em lote).
    */
   const handleSuspenderSelecionados = useCallback(async () => {
@@ -283,8 +299,8 @@ export default function AlunosPage() {
     });
 
     if (!res.ok) {
-      toast.error("Não foi possível cadastrar o aluno. Tente novamente.");
-      return;
+      const { error } = await res.json().catch(() => ({ error: null }));
+      throw new Error(error || "Não foi possível cadastrar o aluno. Tente novamente.");
     }
 
     const { aluno: novoAluno } = await res.json();
@@ -318,7 +334,6 @@ export default function AlunosPage() {
             onFiltrosChange={handleFiltrosChange}
             totalAlunos={alunos.length}
             alunosExibidos={alunosFiltrados.length}
-            personais={MOCK_PERSONAIS}
             isLoading={isLoading}
           />
         </CardContent>
@@ -335,6 +350,7 @@ export default function AlunosPage() {
             onAlunoClick={handleAlunoClick}
             onEdit={handleEdit}
             onSuspender={handleSuspender}
+            onCancelar={handleCancelar}
             onNovoAluno={() => setModalNovoAlunoAberto(true)}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
@@ -397,7 +413,6 @@ export default function AlunosPage() {
         open={modalNovoAlunoAberto}
         onOpenChange={setModalNovoAlunoAberto}
         onSave={handleSaveNovoAluno}
-        personais={MOCK_PERSONAIS}
       />
     </>
   );

@@ -66,6 +66,14 @@ export async function obterUsuarioLogado(): Promise<UsuarioSessao | null> {
   };
 }
 
+/** Apaga todas as sessões do usuário, menos a atual — usado ao trocar a
+ * senha, pra derrubar qualquer sessão esquecida/roubada em outro aparelho. */
+export async function destruirOutrasSessoes(userId: string): Promise<void> {
+  const cookieStore = await cookies();
+  const tokenAtual = cookieStore.get(NOME_COOKIE)?.value ?? "";
+  db.prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?").run(userId, tokenAtual);
+}
+
 /** Apaga a sessão atual (banco + cookie) — usado no logout. */
 export async function destruirSessao(): Promise<void> {
   const cookieStore = await cookies();

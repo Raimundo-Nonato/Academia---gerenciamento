@@ -24,6 +24,7 @@ import {
   Eye,
   Pencil,
   UserX,
+  Ban,
   Mail,
   Phone,
   AlertCircle,
@@ -80,6 +81,8 @@ interface AlunosTabelaProps {
   onEdit: (aluno: Aluno) => void;
   /** Callback para suspender aluno */
   onSuspender: (aluno: Aluno) => void;
+  /** Callback para cancelar matrícula do aluno */
+  onCancelar: (aluno: Aluno) => void;
   /** Callback para criar novo aluno (estado vazio) */
   onNovoAluno: () => void;
   /** IDs dos alunos selecionados */
@@ -150,6 +153,9 @@ function TableSkeleton() {
           <TableHead>
             <Skeleton className="h-4 w-20" />
           </TableHead>
+          <TableHead>
+            <Skeleton className="h-4 w-20" />
+          </TableHead>
           <TableHead className="w-12" />
         </TableRow>
       </TableHeader>
@@ -179,6 +185,9 @@ function TableSkeleton() {
             </TableCell>
             <TableCell>
               <Skeleton className="h-5 w-20" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-24" />
             </TableCell>
             <TableCell>
               <Skeleton className="h-4 w-24" />
@@ -246,12 +255,15 @@ export function AlunosTabela({
   onAlunoClick,
   onEdit,
   onSuspender,
+  onCancelar,
   onNovoAluno,
   selectedIds,
   onSelectionChange,
 }: AlunosTabelaProps) {
   // Estado para dialog de confirmação de suspensão
   const [alunoParaSuspender, setAlunoParaSuspender] = useState<Aluno | null>(null);
+  // Estado para dialog de confirmação de cancelamento
+  const [alunoParaCancelar, setAlunoParaCancelar] = useState<Aluno | null>(null);
 
   /**
    * Verifica se todos os alunos visíveis estão selecionados.
@@ -299,6 +311,16 @@ export function AlunosTabela({
     }
   };
 
+  /**
+   * Confirma cancelamento da matrícula do aluno.
+   */
+  const confirmarCancelamento = () => {
+    if (alunoParaCancelar) {
+      onCancelar(alunoParaCancelar);
+      setAlunoParaCancelar(null);
+    }
+  };
+
   // ============ ESTADOS ESPECIAIS ============
 
   if (isLoading) {
@@ -331,6 +353,7 @@ export function AlunosTabela({
             <TableHead>Nome</TableHead>
             <TableHead className="hidden md:table-cell">Email</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead className="hidden sm:table-cell">Cadastrado em</TableHead>
             <TableHead className="hidden sm:table-cell">Próx. Vencimento</TableHead>
             <TableHead className="w-12">
               <span className="sr-only">Ações</span>
@@ -398,6 +421,13 @@ export function AlunosTabela({
                   </Badge>
                 </TableCell>
 
+                {/* Data de matrícula (cadastro) */}
+                <TableCell className="hidden sm:table-cell">
+                  <span className="text-sm text-muted-foreground">
+                    {formatDate(aluno.dataMatricula)}
+                  </span>
+                </TableCell>
+
                 {/* Vencimento com destaque condicional */}
                 <TableCell className="hidden sm:table-cell">
                   <span
@@ -441,6 +471,13 @@ export function AlunosTabela({
                         <UserX className="h-4 w-4 mr-2" />
                         Suspender
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setAlunoParaCancelar(aluno)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Ban className="h-4 w-4 mr-2" />
+                        Cancelar matrícula
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -471,6 +508,31 @@ export function AlunosTabela({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Suspender
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!alunoParaCancelar}
+        onOpenChange={(open) => !open && setAlunoParaCancelar(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar matrícula?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a cancelar a matrícula de{" "}
+              <strong>{alunoParaCancelar?.nome}</strong>. Diferente da
+              suspensão, o cancelamento é definitivo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarCancelamento}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancelar matrícula
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

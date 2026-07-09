@@ -5,13 +5,15 @@
  * PÁGINA DO DASHBOARD
  * ============================================================================
  *
- * Página inicial do sistema após login.
- * Exibe métricas principais, movimentação da semana e resumo de atividades.
+ * Página inicial do sistema após login. Todos os números vêm de
+ * GET /api/dashboard (calculados no servidor a partir de alunos e
+ * lançamentos reais — ver lib/db/dashboard.ts e PLANO_DASHBOARD.md).
  *
- * TODO: Integrar com API real para dados dinâmicos
- * TODO: Implementar filtros por período
+ * O bloco financeiro chega `null` para quem não tem a permissão
+ * "financeiro" — o RoleGate esconde na tela, mas quem manda é o servidor.
  */
 
+import { useEffect, useState } from "react";
 import {
   Users,
   UserPlus,
@@ -38,6 +40,11 @@ import {
 import { PageHeader } from "@/components/layout";
 import { RoleGate } from "@/components/auth/role-gate";
 import { cn, formatCurrency } from "@/lib/utils";
+import type {
+  AlertaDashboard,
+  DashboardResumo,
+  PontoMatriculas,
+} from "@/types/dashboard";
 
 /**
  * Interface para cards de métricas.
@@ -108,56 +115,57 @@ function MetricCard({
   );
 }
 
-// TODO: Substituir por dados da API
-const MOVIMENTACAO_SEMANA = [
-  { dia: "Seg", checkins: 182 },
-  { dia: "Ter", checkins: 168 },
-  { dia: "Qua", checkins: 195 },
-  { dia: "Qui", checkins: 161 },
-  { dia: "Sex", checkins: 173 },
-  { dia: "Sáb", checkins: 98 },
-  { dia: "Dom", checkins: 42 },
-];
+/**
+ * Variação percentual real vs mês anterior. Sem base de comparação
+ * (mês anterior zerado), a etiqueta some em vez de inventar número.
+ */
+function calcularTendencia(
+  atual: number,
+  anterior: number
+): MetricCardProps["trend"] {
+  if (anterior <= 0) return undefined;
+  const pct = Math.round(((atual - anterior) / anterior) * 100);
+  return { value: Math.abs(pct), isPositive: pct >= 0 };
+}
 
 const chartConfig = {
-  checkins: {
-    label: "Check-ins",
+  matriculas: {
+    label: "Matrículas",
     color: "var(--chart-1)",
   },
 } satisfies ChartConfig;
 
 /**
- * Gráfico de check-ins por dia da semana.
- * O dia atual é destacado com o acento volt.
+ * Gráfico de matrículas dos últimos 6 meses (pela data de matrícula).
+ * O mês atual (última barra) é destacado com o acento volt.
  */
-function MovimentacaoChart() {
-  // getDay(): 0=Dom, 1=Seg... mapeia para o índice do array (Seg=0)
-  const hojeIndex = (new Date().getDay() + 6) % 7;
-
+function MatriculasChart({ dados }: { dados: PontoMatriculas[] }) {
   return (
     <Card className="rise lg:col-span-2" style={{ animationDelay: "240ms" }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-primary" />
-          Movimentação da Semana
+          Matrículas por Mês
         </CardTitle>
         <CardDescription>
-          Check-ins por dia — hoje em destaque
+          Novas matrículas nos últimos 6 meses — mês atual em destaque
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-44 sm:h-56 w-full">
-          <BarChart data={MOVIMENTACAO_SEMANA} margin={{ left: -20 }}>
+          <BarChart data={dados} margin={{ left: -20 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis dataKey="dia" tickLine={false} axisLine={false} />
-            <YAxis tickLine={false} axisLine={false} width={48} />
+            <XAxis dataKey="mes" tickLine={false} axisLine={false} />
+            <YAxis tickLine={false} axisLine={false} width={48} allowDecimals={false} />
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-            <Bar dataKey="checkins" radius={[6, 6, 0, 0]}>
-              {MOVIMENTACAO_SEMANA.map((entry, index) => (
+            <Bar dataKey="matriculas" radius={[6, 6, 0, 0]}>
+              {dados.map((entry, index) => (
                 <Cell
-                  key={entry.dia}
+                  key={`${entry.mes}-${index}`}
                   fill={
-                    index === hojeIndex ? "var(--chart-2)" : "var(--chart-1)"
+                    index === dados.length - 1
+                      ? "var(--chart-2)"
+                      : "var(--chart-1)"
                   }
                 />
               ))}
@@ -170,20 +178,14 @@ function MovimentacaoChart() {
 }
 
 /**
- * Lista de alertas/pendências.
+ * Lista de alertas/pendências — só alertas com dado real por trás
+ * (inadimplentes, vencimentos de hoje e dos próximos 7 dias).
  */
-function AlertsList() {
-  // TODO: Substituir por dados da API
-  const alerts = [
-    { message: "5 mensalidades vencem hoje", priority: "high" },
-    { message: "3 alunos com avaliação pendente", priority: "medium" },
-    { message: "Estoque de suplementos baixo", priority: "low" },
-  ];
-
-  const priorityColors: Record<string, string> = {
-    high: "border-l-destructive bg-destructive/5",
-    medium: "border-l-warning bg-warning/5",
-    low: "border-l-primary bg-primary/5",
+function AlertsList({ alertas }: { alertas: AlertaDashboard[] }) {
+  const priorityColors: Record<AlertaDashboard["prioridade"], string> = {
+    alta: "border-l-destructive bg-destructive/5",
+    media: "border-l-warning bg-warning/5",
+    baixa: "border-l-primary bg-primary/5",
   };
 
   return (
@@ -196,25 +198,43 @@ function AlertsList() {
         <CardDescription>Itens que requerem atenção</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {alerts.map((alert, index) => (
-            <div
-              key={index}
-              className={cn(
-                "rounded-r-md border-l-4 py-2.5 pl-3 pr-2 text-sm",
-                priorityColors[alert.priority]
-              )}
-            >
-              {alert.message}
-            </div>
-          ))}
-        </div>
+        {alertas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhum alerta no momento.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {alertas.map((alerta, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "rounded-r-md border-l-4 py-2.5 pl-3 pr-2 text-sm",
+                  priorityColors[alerta.prioridade]
+                )}
+              >
+                {alerta.mensagem}
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 export default function DashboardPage() {
+  const [resumo, setResumo] = useState<DashboardResumo | null>(null);
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setResumo(data.resumo);
+      });
+  }, []);
+
+  const financeiro = resumo?.financeiro ?? null;
+
   return (
     <>
       <PageHeader title="Dashboard" description="Visão geral do sistema" />
@@ -223,52 +243,61 @@ export default function DashboardPage() {
       <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total de Alunos"
-          value={247}
+          value={resumo ? resumo.totalAlunosAtivos : "—"}
           description="Alunos ativos"
           icon={Users}
-          trend={{ value: 12, isPositive: true }}
           delay={0}
         />
         <MetricCard
           title="Novos este Mês"
-          value={18}
+          value={resumo ? resumo.novosNoMes : "—"}
           description="Matrículas realizadas"
           icon={UserPlus}
-          trend={{ value: 8, isPositive: true }}
+          trend={
+            resumo
+              ? calcularTendencia(resumo.novosNoMes, resumo.novosNoMesAnterior)
+              : undefined
+          }
           delay={60}
         />
 
-        {/* Métricas financeiras - apenas gerente+ */}
+        {/* Métricas financeiras - apenas quem tem permissão */}
         <RoleGate recurso="financeiro">
           <MetricCard
             title="Receita Mensal"
-            value={formatCurrency(45230)}
-            description="Faturamento atual"
+            value={financeiro ? formatCurrency(financeiro.receitaMes) : "—"}
+            description="Faturamento do mês atual"
             icon={DollarSign}
-            trend={{ value: 5, isPositive: true }}
+            trend={
+              financeiro
+                ? calcularTendencia(
+                    financeiro.receitaMes,
+                    financeiro.receitaMesAnterior
+                  )
+                : undefined
+            }
             delay={120}
           />
           <MetricCard
-            title="Taxa de Retenção"
-            value="94%"
-            description="Renovações/Total"
+            title="Em dia"
+            value={resumo ? `${resumo.percentualEmDia}%` : "—"}
+            description="Alunos com pagamento em dia"
             icon={TrendingUp}
-            trend={{ value: 2, isPositive: true }}
             delay={180}
           />
         </RoleGate>
       </div>
 
-      {/* ============ MOVIMENTAÇÃO + ALERTAS ============ */}
+      {/* ============ MATRÍCULAS + ALERTAS ============ */}
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
-        <MovimentacaoChart />
-        <AlertsList />
+        <MatriculasChart dados={resumo?.matriculasPorMes ?? []} />
+        <AlertsList alertas={resumo?.alertas ?? []} />
       </div>
 
       {/* ============ RESUMO FINANCEIRO ============ */}
       <div className="grid gap-6 lg:grid-cols-2">
 
-        {/* Resumo financeiro - apenas gerente+ */}
+        {/* Resumo financeiro - apenas quem tem permissão */}
         <RoleGate recurso="financeiro">
           <Card className="rise" style={{ animationDelay: "420ms" }}>
             <CardHeader>
@@ -276,23 +305,17 @@ export default function DashboardPage() {
               <CardDescription>Visão consolidada do mês atual</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-lg bg-success/10 p-4">
                   <p className="text-sm text-muted-foreground">Recebido</p>
                   <p className="font-display text-xl font-bold tabular-nums text-success">
-                    {formatCurrency(38450)}
+                    {financeiro ? formatCurrency(financeiro.receitaMes) : "—"}
                   </p>
                 </div>
                 <div className="rounded-lg bg-warning/10 p-4">
                   <p className="text-sm text-muted-foreground">A Receber</p>
                   <p className="font-display text-xl font-bold tabular-nums text-warning">
-                    {formatCurrency(6780)}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-destructive/10 p-4">
-                  <p className="text-sm text-muted-foreground">Em Atraso</p>
-                  <p className="font-display text-xl font-bold tabular-nums text-destructive">
-                    {formatCurrency(2340)}
+                    {financeiro ? formatCurrency(financeiro.aReceber) : "—"}
                   </p>
                 </div>
               </div>

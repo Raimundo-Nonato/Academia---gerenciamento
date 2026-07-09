@@ -35,16 +35,9 @@ CREATE TABLE sessions (
 -- padrão. Só é preciso guardar as exceções (o que foi restringido).
 CREATE TABLE permissoes (
   role TEXT NOT NULL CHECK (role IN ('RECEPCIONISTA','GERENTE')),
-  recurso TEXT NOT NULL,           -- ex: 'financeiro', 'agenda', 'funcionarios', 'relatorios'
+  recurso TEXT NOT NULL,           -- único valor hoje: 'financeiro'
   permitido INTEGER NOT NULL,      -- 0 ou 1
   PRIMARY KEY (role, recurso)
-);
-
--- Personal trainers. CRUD completo fica para uma fase futura; por ora, só a tabela.
-CREATE TABLE personals (
-  id TEXT PRIMARY KEY,
-  nome TEXT NOT NULL,
-  ativo INTEGER NOT NULL DEFAULT 1  -- SQLite não tem tipo verdadeiro/falso nativo
 );
 
 -- Alunos: dados básicos + sensíveis na mesma tabela (a máscara do CPF acontece
@@ -57,7 +50,6 @@ CREATE TABLE alunos (
   data_matricula TEXT NOT NULL,          -- ISO yyyy-mm-dd
   status TEXT NOT NULL CHECK (status IN ('ativo','inadimplente','suspenso','cancelado')),
   proximo_vencimento TEXT NOT NULL,      -- ISO yyyy-mm-dd
-  personal_id TEXT REFERENCES personals(id) ON DELETE SET NULL,
 
   -- campos de AlunoDetalhes (sensíveis / LGPD)
   cpf TEXT,
@@ -75,7 +67,12 @@ CREATE TABLE alunos (
   contato_emergencia_parentesco TEXT,
 
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+  -- Nome do personal trainer, digitado livremente por quem cadastra o aluno
+  -- (não é um cadastro à parte — sem tabela, sem tela de gerenciar). Coluna
+  -- adicionada depois (migração 0003), por isso fica no fim da tabela real.
+  personal_nome TEXT
 );
 CREATE INDEX idx_alunos_email ON alunos(email);
 CREATE INDEX idx_alunos_status ON alunos(status);
@@ -94,6 +91,16 @@ CREATE TABLE lancamentos (
 CREATE INDEX idx_lancamentos_data ON lancamentos(data);
 CREATE INDEX idx_lancamentos_categoria ON lancamentos(categoria);
 
+-- Funcionários: lista simples mantida pelo ADMIN (não é conta de login,
+-- por isso o toggle "financeiro" abaixo ainda não é checado em lugar
+-- nenhum — ver types/funcionario.ts).
+CREATE TABLE funcionarios (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  financeiro INTEGER NOT NULL DEFAULT 0 -- migração 0005, por isso no fim
+);
+
 -- Fichas de treino (hierarquia de 4 níveis). Tabelas criadas agora só para
 -- reservar o formato — a tela de gerenciar fichas fica para uma fase futura.
 CREATE TABLE fichas_treino (
@@ -101,10 +108,10 @@ CREATE TABLE fichas_treino (
   nome TEXT NOT NULL,
   descricao TEXT,
   ativa INTEGER NOT NULL DEFAULT 1,
-  personal_id TEXT REFERENCES personals(id) ON DELETE SET NULL,
   aluno_id TEXT REFERENCES alunos(id) ON DELETE CASCADE,
   criado_em TEXT NOT NULL DEFAULT (datetime('now')),
-  atualizada_em TEXT NOT NULL DEFAULT (datetime('now'))
+  atualizada_em TEXT NOT NULL DEFAULT (datetime('now')),
+  personal_nome TEXT -- migração 0003, por isso no fim (ver comentário em `alunos`)
 );
 
 CREATE TABLE dias_treino (

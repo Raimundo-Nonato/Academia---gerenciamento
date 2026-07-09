@@ -24,6 +24,7 @@ import { useTheme } from "next-themes";
 import {
   ChevronDown,
   User,
+  Settings,
   LogOut,
   Wifi,
   WifiOff,
@@ -32,6 +33,7 @@ import {
   Moon,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
+import { UserRole } from "@/types/auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -64,6 +66,7 @@ const ROUTE_LABELS: Record<string, string> = {
   alunos: "Alunos",
   financeiro: "Financeiro",
   perfil: "Meu Perfil",
+  configuracoes: "Configurações",
   novo: "Novo",
   editar: "Editar",
   detalhes: "Detalhes",
@@ -281,6 +284,15 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 Meu Perfil
               </Link>
             </DropdownMenuItem>
+
+            {user?.role === UserRole.ADMIN && (
+              <DropdownMenuItem asChild>
+                <Link href="/configuracoes" className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Configurações
+                </Link>
+              </DropdownMenuItem>
+            )}
 
             <DropdownMenuSeparator />
 

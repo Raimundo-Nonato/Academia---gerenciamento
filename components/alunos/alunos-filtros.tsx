@@ -55,8 +55,6 @@ interface AlunosFiltrosProps {
   totalAlunos: number;
   /** Total de alunos exibidos (com filtro) */
   alunosExibidos: number;
-  /** Lista de personais para o filtro */
-  personais: Array<{ id: string; nome: string }>;
   /** Se está carregando dados */
   isLoading?: boolean;
 }
@@ -85,7 +83,6 @@ export function AlunosFiltros({
   onFiltrosChange,
   totalAlunos,
   alunosExibidos,
-  personais,
   isLoading = false,
 }: AlunosFiltrosProps) {
   // Estado local para busca (antes do debounce)
@@ -113,7 +110,7 @@ export function AlunosFiltros({
     return !!(
       filtros.busca ||
       (filtros.status && filtros.status.length > 0) ||
-      filtros.personalId
+      filtros.temPersonal !== undefined
     );
   }, [filtros]);
 
@@ -213,11 +210,17 @@ export function AlunosFiltros({
 
         {/* Filtro de Personal */}
         <Select
-          value={filtros.personalId || "todos"}
+          value={
+            filtros.temPersonal === undefined
+              ? "todos"
+              : filtros.temPersonal
+                ? "com_personal"
+                : "sem_personal"
+          }
           onValueChange={(value) =>
             onFiltrosChange({
               ...filtros,
-              personalId: value === "todos" ? undefined : value,
+              temPersonal: value === "todos" ? undefined : value === "com_personal",
             })
           }
         >
@@ -227,11 +230,7 @@ export function AlunosFiltros({
           <SelectContent>
             <SelectItem value="todos">Todos os personais</SelectItem>
             <SelectItem value="sem_personal">Sem personal</SelectItem>
-            {personais.map((personal) => (
-              <SelectItem key={personal.id} value={personal.id}>
-                {personal.nome}
-              </SelectItem>
-            ))}
+            <SelectItem value="com_personal">Com personal</SelectItem>
           </SelectContent>
         </Select>
 

@@ -19,6 +19,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
   }
 
-  const aluno = criarAluno(data);
-  return NextResponse.json({ aluno }, { status: 201 });
+  if (Number.isNaN(new Date(data.dataInicio).getTime())) {
+    return NextResponse.json({ error: "Data de início inválida" }, { status: 400 });
+  }
+
+  try {
+    const aluno = criarAluno(data);
+    return NextResponse.json({ aluno }, { status: 201 });
+  } catch (err: any) {
+    if (err.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      return NextResponse.json(
+        { error: "Já existe um aluno cadastrado com esse e-mail" },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 }

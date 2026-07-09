@@ -26,7 +26,6 @@ import {
   LayoutDashboard,
   Users,
   DollarSign,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -51,7 +50,8 @@ import type { NavItem } from "@/types/navigation";
  *
  * Sem `recurso`: item visível para todos os logados. Com `recurso`: some da
  * tela se o ADMIN restringir aquela área para o papel do usuário atual (ver
- * lib/route-permissions.ts e a tela de Configurações).
+ * lib/route-permissions.ts e a tela de Configurações, acessível pelo menu do
+ * usuário na topbar).
  */
 const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
   {
@@ -60,17 +60,6 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Alunos", href: "/alunos", icon: Users },
       { label: "Financeiro", href: "/financeiro", icon: DollarSign, recurso: "financeiro" },
-    ],
-  },
-  {
-    label: "Sistema",
-    items: [
-      {
-        label: "Configurações",
-        href: "/configuracoes",
-        icon: Settings,
-        recurso: "configuracoes",
-      },
     ],
   },
 ];

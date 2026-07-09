@@ -7,23 +7,17 @@
  *
  * Sino de notificações da topbar com painel dropdown.
  *
- * FUNCIONALIDADES:
- * - Badge com contagem de não lidas
- * - Painel com lista de notificações (ícone por tipo, hora relativa)
- * - Clicar em uma notificação marca como lida
- * - "Marcar todas como lidas"
+ * Mostra os mesmos alertas reais do Dashboard (GET /api/dashboard —
+ * inadimplência e mensalidades a vencer), não itens inventados.
  *
- * TODO: Substituir MOCK_NOTIFICACOES por dados da API / websocket
+ * "Lida" fica no localStorage, pela mensagem do alerta: não é um evento
+ * discreto com id (é um total recalculado a cada leitura), então se o
+ * número mudar (ex: "1 aluno inadimplente" -> "2 alunos inadimplentes") o
+ * alerta volta a contar como não lido — o que é o comportamento certo.
  */
 
-import { useState } from "react";
-import {
-  Bell,
-  CheckCheck,
-  CircleDollarSign,
-  ClipboardList,
-  Package,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, Bell, CheckCheck, Clock, CircleDollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,68 +29,59 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { AlertaDashboard } from "@/types/dashboard";
 
-type TipoNotificacao = "financeiro" | "avaliacao" | "estoque";
+const CHAVE_LIDAS = "wenvefit_alertas_lidos";
 
-interface Notificacao {
-  id: string;
-  tipo: TipoNotificacao;
-  titulo: string;
-  descricao: string;
-  hora: string;
-  lida: boolean;
-}
-
-// TODO: Substituir por dados da API
-const MOCK_NOTIFICACOES: Notificacao[] = [
-  {
-    id: "n1",
-    tipo: "financeiro",
-    titulo: "5 mensalidades vencem hoje",
-    descricao: "Envie lembrete de pagamento para os alunos.",
-    hora: "08:12",
-    lida: false,
-  },
-  {
-    id: "n2",
-    tipo: "avaliacao",
-    titulo: "3 avaliações físicas pendentes",
-    descricao: "Agendamentos aguardando confirmação de instrutor.",
-    hora: "07:40",
-    lida: false,
-  },
-  {
-    id: "n3",
-    tipo: "estoque",
-    titulo: "Estoque de suplementos baixo",
-    descricao: "Whey e creatina abaixo do mínimo definido.",
-    hora: "Ontem",
-    lida: false,
-  },
-];
-
-const TIPO_CONFIG: Record<
-  TipoNotificacao,
+const PRIORIDADE_CONFIG: Record<
+  AlertaDashboard["prioridade"],
   { icon: React.ElementType; className: string }
 > = {
-  financeiro: { icon: CircleDollarSign, className: "bg-warning/10 text-warning" },
-  avaliacao: { icon: ClipboardList, className: "bg-primary/10 text-primary" },
-  estoque: { icon: Package, className: "bg-destructive/10 text-destructive" },
+  alta: { icon: AlertTriangle, className: "bg-destructive/10 text-destructive" },
+  media: { icon: Clock, className: "bg-warning/10 text-warning" },
+  baixa: { icon: CircleDollarSign, className: "bg-primary/10 text-primary" },
 };
 
+function carregarLidas(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(CHAVE_LIDAS) ?? "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
 export function NotificationsMenu() {
-  const [notificacoes, setNotificacoes] = useState(MOCK_NOTIFICACOES);
+  const [alertas, setAlertas] = useState<AlertaDashboard[]>([]);
+  const [lidas, setLidas] = useState<Set<string>>(new Set());
 
-  const naoLidas = notificacoes.filter((n) => !n.lida).length;
+  useEffect(() => {
+    setLidas(carregarLidas());
 
-  const marcarComoLida = (id: string) => {
-    setNotificacoes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, lida: true } : n))
-    );
+    let cancelado = false;
+    fetch("/api/dashboard")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelado && data) setAlertas(data.resumo.alertas);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  function persistirLidas(novo: Set<string>) {
+    setLidas(novo);
+    localStorage.setItem(CHAVE_LIDAS, JSON.stringify([...novo]));
+  }
+
+  const naoLidas = alertas.filter((a) => !lidas.has(a.mensagem)).length;
+
+  const marcarComoLida = (mensagem: string) => {
+    persistirLidas(new Set(lidas).add(mensagem));
   };
 
   const marcarTodasComoLidas = () => {
-    setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })));
+    persistirLidas(new Set(alertas.map((a) => a.mensagem)));
   };
 
   return (
@@ -136,22 +121,23 @@ export function NotificationsMenu() {
 
         <DropdownMenuSeparator />
 
-        {notificacoes.length === 0 ? (
+        {alertas.length === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-muted-foreground">
             Nenhuma notificação.
           </p>
         ) : (
-          notificacoes.map((notificacao) => {
-            const config = TIPO_CONFIG[notificacao.tipo];
+          alertas.map((alerta) => {
+            const config = PRIORIDADE_CONFIG[alerta.prioridade];
             const Icon = config.icon;
+            const lida = lidas.has(alerta.mensagem);
 
             return (
               <DropdownMenuItem
-                key={notificacao.id}
-                onClick={() => marcarComoLida(notificacao.id)}
+                key={alerta.mensagem}
+                onClick={() => marcarComoLida(alerta.mensagem)}
                 className={cn(
                   "flex cursor-pointer items-start gap-3 py-2.5",
-                  notificacao.lida && "opacity-55"
+                  lida && "opacity-55"
                 )}
               >
                 <span
@@ -164,21 +150,13 @@ export function NotificationsMenu() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium">
-                      {notificacao.titulo}
-                    </span>
-                    {!notificacao.lida && (
+                    <span className="text-sm font-medium">{alerta.mensagem}</span>
+                    {!lida && (
                       <span
                         className="h-2 w-2 shrink-0 rounded-full bg-primary"
                         aria-label="Não lida"
                       />
                     )}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {notificacao.descricao}
-                  </span>
-                  <span className="mt-1 block text-[11px] text-muted-foreground/70">
-                    {notificacao.hora}
                   </span>
                 </span>
               </DropdownMenuItem>
