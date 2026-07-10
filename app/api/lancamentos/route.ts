@@ -15,7 +15,14 @@ export async function POST(request: NextRequest) {
 
   const dados = await request.json();
 
-  if (!dados.descricao || !dados.valor || !dados.data || !dados.categoria || !dados.formaPagamento) {
+  if (
+    !dados.descricao ||
+    typeof dados.valor !== "number" ||
+    !(dados.valor > 0) ||
+    !dados.data ||
+    !dados.categoria ||
+    !dados.formaPagamento
+  ) {
     return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
   }
 

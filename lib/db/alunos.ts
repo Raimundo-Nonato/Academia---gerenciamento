@@ -16,7 +16,6 @@ interface AlunoRow {
   data_matricula: string;
   status: string;
   proximo_vencimento: string;
-  personal_id: string | null;
   personal_nome: string | null;
   cpf: string | null;
   data_nascimento: string | null;
@@ -33,11 +32,7 @@ interface AlunoRow {
   contato_emergencia_parentesco: string | null;
 }
 
-const SELECT_BASE = `
-  SELECT a.*, p.nome as personal_nome
-  FROM alunos a
-  LEFT JOIN personals p ON p.id = a.personal_id
-`;
+const SELECT_BASE = `SELECT * FROM alunos a`;
 
 function paraAluno(row: AlunoRow): Aluno {
   return {
@@ -53,7 +48,6 @@ function paraAluno(row: AlunoRow): Aluno {
       proximoVencimento: row.proximo_vencimento,
     }),
     proximoVencimento: row.proximo_vencimento,
-    personalId: row.personal_id,
     personalNome: row.personal_nome,
   };
 }
@@ -119,7 +113,7 @@ export function criarAluno(data: NovoAlunoData): Aluno {
   db.prepare(
     `INSERT INTO alunos (
       id, nome, email, telefone, data_matricula, status, proximo_vencimento,
-      personal_id, cpf, data_nascimento, observacoes_medicas
+      personal_nome, cpf, data_nascimento, observacoes_medicas
     ) VALUES (?, ?, ?, ?, ?, 'ativo', ?, ?, ?, ?, ?)`
   ).run(
     id,
@@ -128,7 +122,7 @@ export function criarAluno(data: NovoAlunoData): Aluno {
     data.telefone || "",
     data.dataInicio,
     vencimento.toISOString().slice(0, 10),
-    data.personalId || null,
+    data.personalNome || null,
     data.cpf || null,
     data.dataNascimento,
     data.observacoesMedicas || null
@@ -141,7 +135,7 @@ interface AtualizarAlunoInput {
   nome?: string;
   email?: string;
   telefone?: string;
-  personalId?: string | null;
+  personalNome?: string | null;
 }
 
 /** Atualiza dados básicos de contato do aluno. */
@@ -154,13 +148,13 @@ export function atualizarAluno(
 
   db.prepare(
     `UPDATE alunos SET
-      nome = ?, email = ?, telefone = ?, personal_id = ?, updated_at = datetime('now')
+      nome = ?, email = ?, telefone = ?, personal_nome = ?, updated_at = datetime('now')
      WHERE id = ?`
   ).run(
     dados.nome ?? atual.nome,
     dados.email ?? atual.email,
     dados.telefone ?? atual.telefone,
-    dados.personalId !== undefined ? dados.personalId : atual.personal_id,
+    dados.personalNome !== undefined ? dados.personalNome : atual.personal_nome,
     id
   );
 
@@ -171,6 +165,14 @@ export function atualizarAluno(
 export function suspenderAluno(id: string): Aluno | undefined {
   db.prepare(
     "UPDATE alunos SET status = 'suspenso', updated_at = datetime('now') WHERE id = ?"
+  ).run(id);
+  return buscarAlunoPorId(id);
+}
+
+/** Cancela a matrícula do aluno (definitivo — diferente de suspender). */
+export function cancelarAluno(id: string): Aluno | undefined {
+  db.prepare(
+    "UPDATE alunos SET status = 'cancelado', updated_at = datetime('now') WHERE id = ?"
   ).run(id);
   return buscarAlunoPorId(id);
 }

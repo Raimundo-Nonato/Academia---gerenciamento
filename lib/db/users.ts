@@ -31,3 +31,9 @@ export function atualizarSenha(userId: string, novaSenha: string): void {
   const hash = bcrypt.hashSync(novaSenha, 10);
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, userId);
 }
+
+/** Atualiza nome e e-mail do usuário. Lança SQLITE_CONSTRAINT_UNIQUE se o e-mail já estiver em uso. */
+export function atualizarPerfil(userId: string, name: string, email: string): UsuarioDb {
+  db.prepare("UPDATE users SET name = ?, email = ? WHERE id = ?").run(name, email, userId);
+  return buscarUsuarioPorId(userId) as UsuarioDb;
+}

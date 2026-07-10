@@ -82,6 +82,11 @@ export interface AuthContextType {
    * @returns true se a senha atual informada estiver correta
    */
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  /**
+   * Atualiza nome e e-mail do usuário logado.
+   * @returns null em caso de sucesso, ou uma mensagem de erro
+   */
+  updateProfile: (name: string, email: string) => Promise<string | null>;
 }
 
 /**

@@ -10,6 +10,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import Database from "better-sqlite3";
 
 const DIAS_PARA_MANTER = 30;
 
@@ -29,7 +30,14 @@ fs.mkdirSync(pastaBackup, { recursive: true });
 
 const carimbo = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const destino = path.join(pastaBackup, `wenvefit-${carimbo}.sqlite`);
-fs.copyFileSync(arquivoBanco, destino);
+
+// O banco roda em journal_mode = WAL (lib/db/client.ts) — transações recentes
+// podem estar só no arquivo -wal, não no .sqlite principal. Um fs.copyFileSync
+// simples do arquivo principal arriscaria backups sem os dados mais recentes.
+// db.backup() usa a API oficial de backup do SQLite, que lida com isso.
+const origem = new Database(arquivoBanco, { readonly: true, fileMustExist: true });
+await origem.backup(destino);
+origem.close();
 console.log(`Backup criado: ${destino}`);
 
 const limite = Date.now() - DIAS_PARA_MANTER * 24 * 60 * 60 * 1000;

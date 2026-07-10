@@ -53,10 +53,8 @@ export interface Aluno {
   status: StatusAluno;
   /** Data do próximo vencimento em formato ISO */
   proximoVencimento: string;
-  /** ID do personal trainer (null se não tem) */
-  personalId: string | null;
-  /** Nome do personal para exibição (null se não tem) */
-  personalNome?: string | null;
+  /** Nome do personal trainer, digitado livremente no cadastro (null se não tem) */
+  personalNome: string | null;
 }
 
 /**
@@ -151,7 +149,6 @@ export interface FichaTreino {
   ativa: boolean;
   criadaEm: string;
   atualizadaEm: string;
-  personalId?: string;
   personalNome?: string;
   dias: DiaTreino[];
 }
@@ -215,8 +212,8 @@ export interface FiltrosAluno {
   busca?: string;
   /** Filtrar por status (múltiplos) */
   status?: StatusAluno[];
-  /** Filtrar por personal */
-  personalId?: string;
+  /** Filtrar por ter ou não personal (undefined = todos) */
+  temPersonal?: boolean;
 }
 
 /**
@@ -239,7 +236,7 @@ export interface NovoAlunoDadosBasicos {
 export interface NovoAlunoPlano {
   dataInicio: string;
   metodoPagamento: MetodoPagamentoCadastro;
-  personalId?: string;
+  personalNome?: string;
   observacoesMedicas?: string;
 }
 

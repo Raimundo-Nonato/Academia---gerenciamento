@@ -21,9 +21,10 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import {
   User,
   Mail,
@@ -74,106 +75,8 @@ interface AlunoFichaProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// ============ DADOS MOCK ============
-// TODO: Substituir por chamadas à API (fichas de treino — fase futura)
-
-const MOCK_FICHAS: FichaTreino[] = [
-  {
-    id: "f1",
-    nome: "Treino A - Superior",
-    descricao: "Foco em peito, ombro e tríceps",
-    ativa: true,
-    criadaEm: "2024-01-01",
-    atualizadaEm: "2024-01-20",
-    personalNome: "Carlos Trainer",
-    dias: [
-      {
-        id: "d1",
-        nome: "Treino A",
-        grupos: [
-          {
-            id: "g1",
-            nome: "Peito",
-            exercicios: [
-              {
-                id: "e1",
-                nome: "Supino reto com barra",
-                series: "4",
-                repeticoes: "10",
-                carga: "40kg",
-                descanso: "60s",
-                observacoes: "Manter cotovelos a 45°",
-              },
-              {
-                id: "e2",
-                nome: "Crucifixo com halteres",
-                series: "3",
-                repeticoes: "12",
-                carga: "12kg",
-                descanso: "45s",
-              },
-            ],
-          },
-          {
-            id: "g2",
-            nome: "Tríceps",
-            exercicios: [
-              {
-                id: "e3",
-                nome: "Tríceps corda",
-                series: "3",
-                repeticoes: "12",
-                carga: "20kg",
-                descanso: "45s",
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "f2",
-    nome: "Treino B - Inferior",
-    descricao: "Pernas e glúteos",
-    ativa: true,
-    criadaEm: "2024-01-01",
-    atualizadaEm: "2024-01-15",
-    personalNome: "Carlos Trainer",
-    dias: [
-      {
-        id: "d2",
-        nome: "Treino B",
-        grupos: [
-          {
-            id: "g3",
-            nome: "Pernas",
-            exercicios: [
-              {
-                id: "e4",
-                nome: "Leg press",
-                series: "4",
-                repeticoes: "12",
-                carga: "120kg",
-                descanso: "90s",
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "f3",
-    nome: "Treino C - Costas",
-    descricao: "Costas e bíceps",
-    ativa: false,
-    criadaEm: "2023-10-01",
-    atualizadaEm: "2023-12-01",
-    personalNome: "Ana Personal",
-    dias: [],
-  },
-];
+/** Tempo de espera após a última alteração antes de salvar a ficha no servidor. */
+const SALVAR_FICHA_DEBOUNCE_MS = 600;
 
 /**
  * Formata data para exibição.
@@ -205,9 +108,14 @@ function getInitials(nome: string): string {
 export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
   const { user } = useAuth();
   const [showCPF, setShowCPF] = useState(false);
-  const [fichas, setFichas] = useState<FichaTreino[]>(MOCK_FICHAS);
+  const [fichas, setFichas] = useState<FichaTreino[]>([]);
   const [fichaAbertaId, setFichaAbertaId] = useState<string | null>(null);
   const [detalhes, setDetalhes] = useState<AlunoDetalhes | null>(null);
+  // Uma entrada por ficha (não uma só global) — senão trocar de ficha dentro
+  // da janela de debounce cancela o save pendente da ficha anterior.
+  const pendingSavesRef = useRef<
+    Map<string, { timeout: ReturnType<typeof setTimeout>; ficha: FichaTreino }>
+  >(new Map());
 
   // Busca a ficha completa (com campos sensíveis já mascarados pelo
   // servidor conforme o papel do usuário) sempre que o sheet abre para
@@ -229,40 +137,107 @@ export function AlunoFicha({ aluno, open, onOpenChange }: AlunoFichaProps) {
     };
   }, [aluno, open]);
 
+  // Busca as fichas de treino reais do aluno sempre que o sheet abre.
+  useEffect(() => {
+    if (!aluno || !open) return;
+
+    let cancelado = false;
+
+    fetch(`/api/fichas-treino?alunoId=${aluno.id}`)
+      .then((res) => (res.ok ? res.json() : { fichas: [] }))
+      .then((data) => {
+        if (!cancelado) setFichas(data.fichas ?? []);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [aluno, open]);
+
   // Verifica se usuário é admin para ver CPF completo
   const isAdmin = user?.role === UserRole.ADMIN;
   const podeVerCPF = isAdmin && showCPF;
 
   if (!aluno) return null;
 
+  function persistirFicha(ficha: FichaTreino) {
+    fetch(`/api/fichas-treino/${ficha.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(ficha),
+    }).catch(() => toast.error("Não foi possível salvar a ficha de treino"));
+  }
+
+  /** Salva no servidor a última versão da ficha, um instante depois da
+   * última alteração — evita disparar uma chamada a cada tecla digitada. */
+  function agendarSalvarFicha(ficha: FichaTreino) {
+    const pendente = pendingSavesRef.current.get(ficha.id);
+    if (pendente) clearTimeout(pendente.timeout);
+    pendingSavesRef.current.set(ficha.id, {
+      ficha,
+      timeout: setTimeout(() => {
+        persistirFicha(ficha);
+        pendingSavesRef.current.delete(ficha.id);
+      }, SALVAR_FICHA_DEBOUNCE_MS),
+    });
+  }
+
+  /** Salva imediatamente todas as alterações pendentes (chamado ao fechar o sheet). */
+  function flushSalvarFicha() {
+    for (const { timeout, ficha } of pendingSavesRef.current.values()) {
+      clearTimeout(timeout);
+      persistirFicha(ficha);
+    }
+    pendingSavesRef.current.clear();
+  }
+
   function atualizarFicha(fichaAtualizada: FichaTreino) {
     setFichas((prev) =>
       prev.map((f) => (f.id === fichaAtualizada.id ? fichaAtualizada : f))
     );
+    agendarSalvarFicha(fichaAtualizada);
   }
 
-  function adicionarFicha() {
-    const novaFicha: FichaTreino = {
-      id: `f-${Date.now()}`,
-      nome: "Nova Ficha de Treino",
-      descricao: "",
-      ativa: true,
-      criadaEm: new Date().toISOString().slice(0, 10),
-      atualizadaEm: new Date().toISOString().slice(0, 10),
-      personalNome: aluno?.personalNome ?? undefined,
-      dias: [],
-    };
-    setFichas((prev) => [...prev, novaFicha]);
-    setFichaAbertaId(novaFicha.id);
+  async function adicionarFicha() {
+    const res = await fetch("/api/fichas-treino", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        alunoId: aluno?.id,
+        nome: "Nova Ficha de Treino",
+        personalNome: aluno?.personalNome ?? undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      toast.error("Não foi possível criar a ficha de treino");
+      return;
+    }
+
+    const { ficha } = await res.json();
+    setFichas((prev) => [...prev, ficha]);
+    setFichaAbertaId(ficha.id);
   }
 
-  function excluirFicha(fichaId: string) {
+  async function excluirFicha(fichaId: string) {
+    const res = await fetch(`/api/fichas-treino/${fichaId}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Não foi possível excluir a ficha de treino");
+      return;
+    }
+
     setFichas((prev) => prev.filter((f) => f.id !== fichaId));
     if (fichaAbertaId === fichaId) setFichaAbertaId(null);
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) flushSalvarFicha();
+        onOpenChange(next);
+      }}
+    >
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader className="space-y-4 px-6 pb-2 pt-6">
           {/* Header com avatar e info básica */}

@@ -12,6 +12,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
   const { id } = await params;
   const dados = await request.json();
+
+  if (dados.valor !== undefined && !(typeof dados.valor === "number" && dados.valor > 0)) {
+    return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
+  }
+
   const lancamento = atualizarLancamento(id, dados);
 
   if (!lancamento) {

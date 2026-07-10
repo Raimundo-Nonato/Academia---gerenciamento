@@ -39,13 +39,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { NovoAlunoData } from "@/types/aluno";
 
@@ -54,27 +48,33 @@ import { NovoAlunoData } from "@/types/aluno";
 /**
  * Schema do Passo 1 - Dados Básicos.
  */
-const dadosBasicosSchema = z.object({
-  nome: z
-    .string()
-    .min(3, "Nome deve ter pelo menos 3 caracteres")
-    .max(100, "Nome muito longo"),
-  email: z.string().email("Email inválido"),
-  dataNascimento: z.string().min(1, "Data de nascimento obrigatória"),
-  telefone: z
-    .string()
-    .regex(/^\(\d{2}\)\s?\d{4,5}-?\d{4}$/, "Formato: (11) 99999-9999")
-    .optional()
-    .or(z.literal("")),
-  cpf: z
-    .string()
-    .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato: 000.000.000-00")
-    .optional()
-    .or(z.literal("")),
-  dataInicio: z.string().min(1, "Data de início obrigatória"),
-  personalId: z.string().optional(),
-  observacoesMedicas: z.string().optional(),
-});
+const dadosBasicosSchema = z
+  .object({
+    nome: z
+      .string()
+      .min(3, "Nome deve ter pelo menos 3 caracteres")
+      .max(100, "Nome muito longo"),
+    email: z.string().email("Email inválido"),
+    dataNascimento: z.string().min(1, "Data de nascimento obrigatória"),
+    telefone: z
+      .string()
+      .regex(/^\(\d{2}\)\s?\d{4,5}-?\d{4}$/, "Formato: (11) 99999-9999")
+      .optional()
+      .or(z.literal("")),
+    cpf: z
+      .string()
+      .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato: 000.000.000-00")
+      .optional()
+      .or(z.literal("")),
+    dataInicio: z.string().min(1, "Data de início obrigatória"),
+    temPersonal: z.boolean(),
+    personalNome: z.string().optional(),
+    observacoesMedicas: z.string().optional(),
+  })
+  .refine((data) => !data.temPersonal || !!data.personalNome?.trim(), {
+    message: "Informe o nome do personal trainer",
+    path: ["personalNome"],
+  });
 
 type DadosBasicosForm = z.infer<typeof dadosBasicosSchema>;
 
@@ -88,8 +88,6 @@ interface NovoAlunoModalProps {
   onOpenChange: (open: boolean) => void;
   /** Callback ao salvar com sucesso */
   onSave: (data: NovoAlunoData) => Promise<void>;
-  /** Lista de personais disponíveis */
-  personais: Array<{ id: string; nome: string }>;
 }
 
 /**
@@ -104,7 +102,6 @@ export function NovoAlunoModal({
   open,
   onOpenChange,
   onSave,
-  personais,
 }: NovoAlunoModalProps) {
   const [passoAtual, setPassoAtual] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,7 +117,8 @@ export function NovoAlunoModal({
       telefone: "",
       cpf: "",
       dataInicio: new Date().toISOString().split("T")[0],
-      personalId: "",
+      temPersonal: false,
+      personalNome: "",
       observacoesMedicas: "",
     },
   });
@@ -163,8 +161,10 @@ export function NovoAlunoModal({
       });
       resetForm();
       onOpenChange(false);
-    } catch {
-      setSubmitError("Erro ao cadastrar aluno. Tente novamente.");
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : "Erro ao cadastrar aluno. Tente novamente."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -327,25 +327,39 @@ export function NovoAlunoModal({
               </div>
 
               <div className="col-span-1 sm:col-span-2 space-y-2">
-                <Label htmlFor="personalId">Personal Trainer (opcional)</Label>
-                <Select
-                  value={formPasso1.watch("personalId") || "sem_personal"}
-                  onValueChange={(v) =>
-                    formPasso1.setValue("personalId", v === "sem_personal" ? "" : v)
-                  }
+                <Label>Personal Trainer</Label>
+                <RadioGroup
+                  value={formPasso1.watch("temPersonal") ? "com_personal" : "sem_personal"}
+                  onValueChange={(v) => {
+                    const temPersonal = v === "com_personal";
+                    formPasso1.setValue("temPersonal", temPersonal);
+                    if (!temPersonal) formPasso1.setValue("personalNome", "");
+                  }}
+                  className="flex gap-4"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um personal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sem_personal">Sem personal</SelectItem>
-                    {personais.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="sem_personal" id="sem_personal" />
+                    Sem personal
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="com_personal" id="com_personal" />
+                    Com personal
+                  </label>
+                </RadioGroup>
+                {formPasso1.watch("temPersonal") && (
+                  <>
+                    <Input
+                      {...formPasso1.register("personalNome")}
+                      placeholder="Nome do personal trainer"
+                      className="mt-2"
+                    />
+                    {formPasso1.formState.errors.personalNome && (
+                      <p className="text-sm text-destructive mt-1">
+                        {formPasso1.formState.errors.personalNome.message}
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="col-span-1 sm:col-span-2 space-y-2">
@@ -409,13 +423,10 @@ export function NovoAlunoModal({
                     <dt className="text-muted-foreground">Início</dt>
                     <dd>{dadosBasicos.dataInicio}</dd>
                   </div>
-                  {dadosBasicos.personalId && (
+                  {dadosBasicos.temPersonal && dadosBasicos.personalNome && (
                     <div className="col-span-2">
                       <dt className="text-muted-foreground">Personal</dt>
-                      <dd>
-                        {personais.find((p) => p.id === dadosBasicos.personalId)?.nome ||
-                          "Não encontrado"}
-                      </dd>
+                      <dd>{dadosBasicos.personalNome}</dd>
                     </div>
                   )}
                 </dl>

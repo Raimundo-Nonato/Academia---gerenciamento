@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { obterUsuarioLogado } from "@/lib/auth/session";
+import { destruirOutrasSessoes, obterUsuarioLogado } from "@/lib/auth/session";
 import { atualizarSenha, buscarUsuarioPorId, conferirSenha } from "@/lib/db/users";
 
 export async function POST(request: NextRequest) {
@@ -19,5 +19,6 @@ export async function POST(request: NextRequest) {
   }
 
   atualizarSenha(usuario.id, newPassword);
+  await destruirOutrasSessoes(usuario.id);
   return NextResponse.json({ ok: true });
 }

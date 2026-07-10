@@ -15,9 +15,6 @@
  */
 export const ROUTE_RESOURCE: Record<string, string> = {
   "/financeiro": "financeiro",
-  "/agenda": "agenda",
-  "/funcionarios": "funcionarios",
-  "/relatorios": "relatorios",
   "/configuracoes": "configuracoes",
 };
 

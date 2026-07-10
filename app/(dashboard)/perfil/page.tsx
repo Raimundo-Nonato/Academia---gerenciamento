@@ -6,8 +6,6 @@
  * ============================================================================
  *
  * Perfil do usuário logado: dados pessoais, papel no sistema e segurança.
- *
- * TODO: Integrar com API real (salvar alterações, trocar senha)
  */
 
 import { useState, useEffect } from "react";
@@ -40,7 +38,7 @@ import { ROLE_BADGE_COLORS, ROLE_LEVELS } from "@/types/auth";
 import { cn, getInitials } from "@/lib/utils";
 
 export default function PerfilPage() {
-  const { user, changePassword } = useAuth();
+  const { user, changePassword, updateProfile } = useAuth();
 
   // Formulário controlado (inicializado com os dados do usuário)
   const [nome, setNome] = useState("");
@@ -66,14 +64,16 @@ export default function PerfilPage() {
 
   const badgeColors = ROLE_BADGE_COLORS[user.role];
 
-  /**
-   * Salva alterações do perfil.
-   * TODO: Chamar API PATCH /me
-   */
+  /** Salva alterações do perfil (nome/e-mail). */
   const handleSalvar = async () => {
     setSalvando(true);
-    await new Promise((r) => setTimeout(r, 700)); // Simula API
+    const erro = await updateProfile(nome, email);
     setSalvando(false);
+
+    if (erro) {
+      toast.error(erro);
+      return;
+    }
     toast.success("Perfil atualizado com sucesso!");
   };
 

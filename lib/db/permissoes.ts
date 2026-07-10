@@ -5,12 +5,7 @@ import { db } from "./client";
  * pela tela de Configurações. "configuracoes" NUNCA entra nessa lista — é
  * sempre exclusiva do ADMIN (ver lib/auth/guard.ts).
  */
-export const RECURSOS_CONFIGURAVEIS = [
-  "financeiro",
-  "agenda",
-  "relatorios",
-  "funcionarios",
-] as const;
+export const RECURSOS_CONFIGURAVEIS = ["financeiro"] as const;
 
 export type RecursoConfiguravel = (typeof RECURSOS_CONFIGURAVEIS)[number];
 export type PapelConfiguravel = "GERENTE" | "RECEPCIONISTA";
