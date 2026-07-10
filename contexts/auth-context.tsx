@@ -86,6 +86,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     []
   );
 
+  const updateProfile = useCallback(async (name: string, email: string) => {
+    const res = await fetch("/api/auth/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email }),
+    });
+    const data = await res.json();
+    if (!res.ok) return data.error ?? "Não foi possível salvar as alterações";
+
+    setUser((prev) => (prev ? { ...prev, ...data.user } : prev));
+    return null;
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -96,6 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         login,
         logout,
         changePassword,
+        updateProfile,
       }}
     >
       {children}

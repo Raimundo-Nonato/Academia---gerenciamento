@@ -49,8 +49,8 @@ echo   "2-abrir-wenvefit.vbs" para abrir o sistema
 echo   (duplo clique - nao precisa mais deste aqui).
 echo.
 echo   Login inicial:
-echo     admin@wenvefit.com     /  troque-esta-senha-admin
-echo     gerente@wenvefit.com   /  troque-esta-senha-gerente
+echo     admin@gmail.com     /  123
+echo     gerente@gmail.com   /  123
 echo.
 echo   Troque essas senhas assim que entrar no sistema.
 echo ============================================

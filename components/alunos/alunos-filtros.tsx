@@ -187,7 +187,9 @@ export function AlunosFiltros({
               <p className="text-sm font-medium text-muted-foreground mb-3">
                 Filtrar por status
               </p>
-              {(Object.keys(STATUS_ALUNO_CONFIG) as StatusAluno[]).map((status) => (
+              {(Object.keys(STATUS_ALUNO_CONFIG) as StatusAluno[])
+                .filter((status) => status !== "suspenso")
+                .map((status) => (
                 <label
                   key={status}
                   className="flex items-center gap-2 cursor-pointer py-1"
